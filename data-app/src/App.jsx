@@ -94,29 +94,54 @@ function App() {
     verifyPayment: `${API_BASE_URL}/api/payments/verify`
   };
 
-  // Initialize Google Sign-In
+  // Initialize Google Sign-In - FIXED VERSION
   useEffect(() => {
-    initializeGoogleSignIn();
-  }, []);
+    if (!isLoggedIn) {
+      initializeGoogleSignIn();
+    }
+  }, [isLoggedIn]);
 
   const initializeGoogleSignIn = () => {
-    // Load Google Sign-In script
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (window.google) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleSignIn,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        });
-        
-        // Render Google Sign-In button
+    // Check if Google script is already loaded
+    if (!window.google) {
+      // Load Google Sign-In script
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        console.log('Google Sign-In script loaded');
+        renderGoogleButton();
+      };
+      script.onerror = () => {
+        console.error('Failed to load Google Sign-In script');
+      };
+      document.head.appendChild(script);
+    } else {
+      // Script already loaded, render button directly
+      renderGoogleButton();
+    }
+  };
+
+  const renderGoogleButton = () => {
+    if (!window.google || !document.getElementById('googleSignInButton')) {
+      console.log('Google not available or button element not found');
+      return;
+    }
+
+    try {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleSignIn,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+      
+      // Render Google Sign-In button with error handling
+      const buttonContainer = document.getElementById('googleSignInButton');
+      if (buttonContainer && buttonContainer.children.length === 0) {
         window.google.accounts.id.renderButton(
-          document.getElementById('googleSignInButton'),
+          buttonContainer,
           {
             theme: 'outline',
             size: 'large',
@@ -125,12 +150,14 @@ function App() {
             shape: 'rectangular'
           }
         );
+        console.log('Google Sign-In button rendered successfully');
       }
-    };
-    document.head.appendChild(script);
+    } catch (error) {
+      console.error('Error rendering Google button:', error);
+    }
   };
 
-  // Google Sign-In Handler - FIXED with your exact code
+  // Google Sign-In Handler
   const handleGoogleSignIn = async (googleData) => {
     setActionLoading(true);
     try {
@@ -1124,7 +1151,7 @@ function App() {
             </button>
           </div>
 
-          {/* Google Sign-in Button - UPDATED with proper Google button */}
+          {/* Google Sign-in Button - FIXED with proper rendering */}
           <div className="social-auth">
             <div id="googleSignInButton"></div>
           </div>
