@@ -291,8 +291,6 @@ function App() {
         console.log('PWA: Service Worker already registered or failed');
       }
     }
-
-    // Skip the install prompt for now to avoid conflicts
   };
 
   const checkDarkMode = () => {
@@ -431,7 +429,7 @@ function App() {
     }
   };
 
-  // ENHANCED Data Plans Fetching - FIXED to use API properly
+  // FIXED: Data Plans Fetching - Removed the syntax error
   const fetchDataPlans = async (networkCode) => {
     if (!networkCode) {
       console.log('No network code provided for data plans');
