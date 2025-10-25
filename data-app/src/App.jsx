@@ -616,35 +616,62 @@ function App() {
       setActionLoading(false);
     }
   };
+// Resend OTP - safer implementation
+const handleResendOtp = async () => {
+  if (!otpEmail) {
+    showNotification('No email to resend OTP to', 'error');
+    return;
+  }
 
-  // Resend OTP
-  const handleResendOtp = async () => {
-    setActionLoading(true);
-    try {
-      const response = await fetch(API_URLS.resendOtp, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: otpEmail
-        })
-      });
+  setActionLoading(true);
+  try {
+    const response = await fetch(API_URLS.resendOtp, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email: otpEmail })
+    });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+    // Defensive JSON parse: only try to parse if response has JSON content-type
+    const contentType = response.headers.get('content-type') || '';
+    let data = null;
+    if (contentType.includes('application/json')) {
+      try {
+        data = await response.json();
+      } catch (parseErr) {
+        console.error('Failed to parse JSON from resendOtp response', parseErr);
+        showNotification('Failed to resend OTP (invalid server response)', 'error');
+        return;
+      }
+    } else {
+      // fallback: if no JSON body but response.ok treat as success or read text for debugging
+      const text = await response.text();
+      console.warn('resendOtp returned non-json response:', text);
+      if (response.ok) {
         setOtpTimer(300);
         showNotification('New OTP sent to your email!', 'success');
+        return;
       } else {
-        showNotification(data.message || 'Failed to resend OTP', 'error');
+        showNotification('Failed to resend OTP', 'error');
+        return;
       }
-    } catch (error) {
-      showNotification('Failed to resend OTP', 'error');
-    } finally {
-      setActionLoading(false);
     }
-  };
+
+    if (response.ok && data && data.success) {
+      setOtpTimer(300);
+      showNotification('New OTP sent to your email!', 'success');
+    } else {
+      console.error('Resend OTP failed:', data);
+      showNotification((data && data.message) || 'Failed to resend OTP', 'error');
+    }
+  } catch (error) {
+    console.error('Failed to resend OTP:', error);
+    showNotification('Failed to resend OTP', 'error');
+  } finally {
+    setActionLoading(false);
+  }
+};
 
   // Handle login
   const handleLogin = async (e) => {
