@@ -1,4 +1,4 @@
- import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +66,7 @@ function App() {
   const [greeting, setGreeting] = useState('');
   const [referrals, setReferrals] = useState([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [googleScriptLoaded, setGoogleScriptLoaded] = useState(false);
 
   // Google Client ID
   const GOOGLE_CLIENT_ID = "359926094033-rl57709vq8llcjvgc45pdljt3srp3g9n.apps.googleusercontent.com";
@@ -94,43 +95,97 @@ function App() {
     verifyPayment: `${API_BASE_URL}/api/payments/verify`
   };
 
-  // Initialize Google Sign-In
+  // Initialize Google Sign-In - SIMPLIFIED VERSION
   useEffect(() => {
+    const initializeGoogleSignIn = () => {
+      // Check if script is already loaded
+      const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+      
+      if (existingScript) {
+        // Script already exists, just initialize
+        if (window.google) {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleSignIn,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+          renderGoogleButton();
+        }
+        return;
+      }
+
+      // Load Google Sign-In script
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        if (window.google) {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleSignIn,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+          setGoogleScriptLoaded(true);
+          renderGoogleButton();
+        }
+      };
+      document.head.appendChild(script);
+    };
+
+    const renderGoogleButton = () => {
+      if (window.google && document.getElementById('googleSignInButton')) {
+        try {
+          window.google.accounts.id.renderButton(
+            document.getElementById('googleSignInButton'),
+            {
+              theme: 'outline',
+              size: 'large',
+              width: '100%',
+              text: 'continue_with',
+              shape: 'rectangular'
+            }
+          );
+        } catch (error) {
+          console.error('Error rendering Google button:', error);
+        }
+      }
+    };
+
+    // Initialize when component mounts
     initializeGoogleSignIn();
   }, []);
 
-  const initializeGoogleSignIn = () => {
-    // Load Google Sign-In script
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (window.google) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleSignIn,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        });
-        
-        // Render Google Sign-In button
-        window.google.accounts.id.renderButton(
-          document.getElementById('googleSignInButton'),
-          {
-            theme: 'outline',
-            size: 'large',
-            width: '100%',
-            text: 'continue_with',
-            shape: 'rectangular'
+  // Re-render Google button when auth state changes or script loads
+  useEffect(() => {
+    if ((!isLoggedIn && googleScriptLoaded) || (!isLoggedIn && window.google)) {
+      const renderButton = () => {
+        if (window.google && document.getElementById('googleSignInButton')) {
+          try {
+            window.google.accounts.id.renderButton(
+              document.getElementById('googleSignInButton'),
+              {
+                theme: 'outline',
+                size: 'large',
+                width: '100%',
+                text: 'continue_with',
+                shape: 'rectangular'
+              }
+            );
+          } catch (error) {
+            console.error('Error rendering Google button:', error);
           }
-        );
-      }
-    };
-    document.head.appendChild(script);
-  };
+        }
+      };
 
-  // Google Sign-In Handler - FIXED with your exact code
+      // Small delay to ensure DOM is ready
+      setTimeout(renderButton, 100);
+    }
+  }, [isLoggedIn, googleScriptLoaded]);
+
+  // Google Sign-In Handler
   const handleGoogleSignIn = async (googleData) => {
     setActionLoading(true);
     try {
@@ -205,7 +260,7 @@ function App() {
     return () => clearInterval(interval);
   }, [otpTimer]);
 
-  // Network selection effect
+  // Network selection effect - FIXED: Fetch data plans from API
   useEffect(() => {
     if (selectedNetwork && isLoggedIn) {
       console.log('Fetching data plans for network:', selectedNetwork);
@@ -434,7 +489,7 @@ function App() {
     }
   };
 
-  // Enhanced Data Plans Fetching
+  // ENHANCED Data Plans Fetching - FIXED to use API properly
   const fetchDataPlans = async (networkCode) => {
     if (!networkCode) {
       console.log('No network code provided for data plans');
@@ -445,11 +500,9 @@ function App() {
     try {
       const token = localStorage.getItem('jaysub_token');
       
-      // Use fallback data immediately while API call is in progress
-      const fallbackPlans = getFallbackDataPlans(networkCode);
-      setDataPlans(fallbackPlans);
-
+      // First try to fetch from API
       if (token) {
+        console.log('Fetching data plans from API for network:', networkCode);
         const response = await fetch(API_URLS.dataPlans(networkCode), {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -459,14 +512,29 @@ function App() {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Data plans fetched for', networkCode, ':', data.plans);
+          console.log('Data plans fetched from API for', networkCode, ':', data);
+          
           if (data.plans && data.plans.length > 0) {
+            console.log('Using API data plans');
             setDataPlans(data.plans);
+            return;
           }
+        } else {
+          console.log('API fetch failed, status:', response.status);
         }
+      } else {
+        console.log('No token available for data plans fetch');
       }
+      
+      // If API fails, use fallback
+      console.log('Using fallback data plans for', networkCode);
+      const fallbackPlans = getFallbackDataPlans(networkCode);
+      setDataPlans(fallbackPlans);
+      
     } catch (error) {
-      console.error('Failed to fetch data plans, using fallback:', error);
+      console.error('Failed to fetch data plans from API, using fallback:', error);
+      const fallbackPlans = getFallbackDataPlans(networkCode);
+      setDataPlans(fallbackPlans);
     } finally {
       setActionLoading(false);
     }
@@ -616,64 +684,65 @@ function App() {
       setActionLoading(false);
     }
   };
-// Resend OTP - safer implementation
-const handleResendOtp = async () => {
-  if (!otpEmail) {
-    showNotification('No email to resend OTP to', 'error');
-    return;
-  }
 
-  setActionLoading(true);
-  try {
-    const response = await fetch(API_URLS.resendOtp, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email: otpEmail })
-    });
+  // Resend OTP - safer implementation
+  const handleResendOtp = async () => {
+    if (!otpEmail) {
+      showNotification('No email to resend OTP to', 'error');
+      return;
+    }
 
-    // Defensive JSON parse: only try to parse if response has JSON content-type
-    const contentType = response.headers.get('content-type') || '';
-    let data = null;
-    if (contentType.includes('application/json')) {
-      try {
-        data = await response.json();
-      } catch (parseErr) {
-        console.error('Failed to parse JSON from resendOtp response', parseErr);
-        showNotification('Failed to resend OTP (invalid server response)', 'error');
-        return;
+    setActionLoading(true);
+    try {
+      const response = await fetch(API_URLS.resendOtp, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: otpEmail })
+      });
+
+      // Defensive JSON parse: only try to parse if response has JSON content-type
+      const contentType = response.headers.get('content-type') || '';
+      let data = null;
+      if (contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (parseErr) {
+          console.error('Failed to parse JSON from resendOtp response', parseErr);
+          showNotification('Failed to resend OTP (invalid server response)', 'error');
+          return;
+        }
+      } else {
+        // fallback: if no JSON body but response.ok treat as success or read text for debugging
+        const text = await response.text();
+        console.warn('resendOtp returned non-json response:', text);
+        if (response.ok) {
+          setOtpTimer(300);
+          showNotification('New OTP sent to your email!', 'success');
+          return;
+        } else {
+          showNotification('Failed to resend OTP', 'error');
+          return;
+        }
       }
-    } else {
-      // fallback: if no JSON body but response.ok treat as success or read text for debugging
-      const text = await response.text();
-      console.warn('resendOtp returned non-json response:', text);
-      if (response.ok) {
+
+      if (response.ok && data && data.success) {
         setOtpTimer(300);
         showNotification('New OTP sent to your email!', 'success');
-        return;
       } else {
-        showNotification('Failed to resend OTP', 'error');
-        return;
+        console.error('Resend OTP failed:', data);
+        showNotification((data && data.message) || 'Failed to resend OTP', 'error');
       }
+    } catch (error) {
+      console.error('Failed to resend OTP:', error);
+      showNotification('Failed to resend OTP', 'error');
+    } finally {
+      setActionLoading(false);
     }
+  };
 
-    if (response.ok && data && data.success) {
-      setOtpTimer(300);
-      showNotification('New OTP sent to your email!', 'success');
-    } else {
-      console.error('Resend OTP failed:', data);
-      showNotification((data && data.message) || 'Failed to resend OTP', 'error');
-    }
-  } catch (error) {
-    console.error('Failed to resend OTP:', error);
-    showNotification('Failed to resend OTP', 'error');
-  } finally {
-    setActionLoading(false);
-  }
-};
-
-  // Handle login
+  // Handle login - FIXED: Added missing password field
   const handleLogin = async (e) => {
     e.preventDefault();
     setActionLoading(true);
@@ -1124,7 +1193,7 @@ const handleResendOtp = async () => {
     );
   }
 
-  // Login/Signup Form
+  // Login/Signup Form - FIXED: Added missing password field and complete form
   if (!isLoggedIn) {
     return (
       <div className="auth-container">
@@ -1151,72 +1220,111 @@ const handleResendOtp = async () => {
             </button>
           </div>
 
-          {/* Google Sign-in Button - UPDATED with proper Google button */}
           {/* Google Sign-in Button - FIXED */}
-<div className="social-auth">
-  <div id="googleSignInButton"></div>
-</div>
+          <div className="social-auth">
+            <div id="googleSignInButton" style={{ minHeight: '44px', display: 'flex', justifyContent: 'center' }}>
+              {/* Fallback button in case Google script doesn't load */}
+              {!window.google && (
+                <button 
+                  type="button" 
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    background: 'white',
+                    color: '#333',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => showNotification('Google Sign-In loading...', 'info')}
+                >
+                  Sign in with Google
+                </button>
+              )}
+            </div>
+          </div>
+          
+          <div className="auth-divider">
+            <span>or continue with email</span>
+          </div>
 
-<script dangerouslySetInnerHTML={{
-  __html: `
-    function loadGoogleSignIn() {
-      // Check if already loaded
-      if (window.google && document.getElementById('googleSignInButton').children.length > 0) {
-        return;
-      }
-      
-      // Initialize Google Sign-in
-      google.accounts.id.initialize({
-        client_id: '359926094033-rl57709vq8llcjvgc45pdljt3srp3g9n.apps.googleusercontent.com',
-        callback: function(response) {
-          console.log('Google login success:', response);
-          // Handle login response here
-        },
-        auto_select: false
-      });
-      
-      // Render the button
-      google.accounts.id.renderButton(
-        document.getElementById("googleSignInButton"),
-        { 
-          theme: "outline", 
-          size: "large",
-          width: 400,
-          text: "continue_with"
-        }
-      );
-    }
-    
-    // Load Google script
-    if (!window.google) {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      script.onload = loadGoogleSignIn;
-      document.head.appendChild(script);
-    } else {
-      loadGoogleSignIn();
-    }
-  `
-}} />
- </div>         
-<div className="auth-divider">
-  <span>or continue with email</span>
-</div>
-
-{isLogin ? (
-  <form onSubmit={handleLogin} className="auth-form">
-    <div className="form-group">
-      <input
-        type="email"
-        placeholder="Email Address"
-        value={loginData.email}
-        onChange={(e) => setLoginData({...loginData, email: e.target.value})}
-        required
-        disabled={actionLoading}
-      />
-              
+          {isLogin ? (
+            <form onSubmit={handleLogin} className="auth-form">
+              <div className="form-group">
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  value={loginData.email}
+                  onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={loginData.password}
+                  onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <button type="submit" className="auth-btn" disabled={actionLoading}>
+                {actionLoading ? 'Logging in...' : 'Login'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSignup} className="auth-form">
+              <div className="form-group">
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={signupData.name}
+                  onChange={(e) => setSignupData({...signupData, name: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  value={signupData.email}
+                  onChange={(e) => setSignupData({...signupData, email: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={signupData.phone}
+                  onChange={(e) => setSignupData({...signupData, phone: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={signupData.password}
+                  onChange={(e) => setSignupData({...signupData, password: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="password"
+                  placeholder="Confirm Password"
+                  value={signupData.confirmPassword}
+                  onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
               </div>
               <button type="submit" className="auth-btn" disabled={actionLoading}>
                 {actionLoading ? 'Creating Account...' : 'Create Account'}
@@ -1228,19 +1336,16 @@ const handleResendOtp = async () => {
     );
   }
 
-  // Main App after login - REST OF THE CODE REMAINS THE SAME...
-  // [The rest of your main app code remains unchanged...]
-  // Main App after login
+  // Main App after login - FIXED: Removed greeting from header
   return (
     <div className={`app ${darkMode ? 'dark' : ''}`}>
       {actionLoading && <div className="action-preloader">Processing...</div>}
       
-      {/* Header */}
+      {/* Header - FIXED: Removed the greeting text */}
       <header className="header">
         <div className="header-content">
           <h1>JAYSUB</h1>
           <div className="user-menu">
-            <span>{greeting}, {user?.name}</span>
             <div className="wallet-badge">
               ₦{walletBalance.toLocaleString()}
             </div>
@@ -1799,4 +1904,4 @@ const handleResendOtp = async () => {
   );
 }
 
-export default App; 
+export default App;
