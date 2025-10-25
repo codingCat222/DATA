@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -66,9 +66,6 @@ function App() {
   const [greeting, setGreeting] = useState('');
   const [referrals, setReferrals] = useState([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [googleScriptLoaded, setGoogleScriptLoaded] = useState(false);
-
-  const googleButtonRef = useRef(null);
 
   // Google Client ID
   const GOOGLE_CLIENT_ID = "359926094033-rl57709vq8llcjvgc45pdljt3srp3g9n.apps.googleusercontent.com";
@@ -97,80 +94,43 @@ function App() {
     verifyPayment: `${API_BASE_URL}/api/payments/verify`
   };
 
-  // SIMPLIFIED Google Sign-In - FIXED VERSION
+  // Initialize Google Sign-In
   useEffect(() => {
-    // Only initialize if not logged in
-    if (isLoggedIn) return;
+    initializeGoogleSignIn();
+  }, []);
 
-    const loadGoogleScript = () => {
-      // Check if already initialized
+  const initializeGoogleSignIn = () => {
+    // Load Google Sign-In script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
       if (window.google) {
-        renderGoogleButton();
-        return;
-      }
-
-      // Check if script already exists
-      if (document.querySelector('script[src*="accounts.google.com"]')) {
-        // Script is loading, wait for it
-        const checkGoogle = setInterval(() => {
-          if (window.google) {
-            clearInterval(checkGoogle);
-            renderGoogleButton();
-          }
-        }, 100);
-        return;
-      }
-
-      // Load the Google script
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        if (window.google) {
-          window.google.accounts.id.initialize({
-            client_id: GOOGLE_CLIENT_ID,
-            callback: handleGoogleSignIn,
-            auto_select: false,
-            cancel_on_tap_outside: true,
-          });
-          setGoogleScriptLoaded(true);
-          renderGoogleButton();
-        }
-      };
-      document.head.appendChild(script);
-    };
-
-    const renderGoogleButton = () => {
-      if (!window.google || !googleButtonRef.current) return;
-      
-      try {
-        // Clear any existing button
-        if (googleButtonRef.current) {
-          googleButtonRef.current.innerHTML = '';
-        }
-        
-        window.google.accounts.id.renderButton(googleButtonRef.current, {
-          theme: 'outline',
-          size: 'large',
-          width: '100%',
-          text: 'continue_with',
-          shape: 'rectangular'
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleSignIn,
+          auto_select: false,
+          cancel_on_tap_outside: true,
         });
-      } catch (error) {
-        console.error('Error rendering Google button:', error);
+        
+        // Render Google Sign-In button
+        window.google.accounts.id.renderButton(
+          document.getElementById('googleSignInButton'),
+          {
+            theme: 'outline',
+            size: 'large',
+            width: '100%',
+            text: 'continue_with',
+            shape: 'rectangular'
+          }
+        );
       }
     };
+    document.head.appendChild(script);
+  };
 
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      loadGoogleScript();
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [isLoggedIn]);
-
-  // Google Sign-In Handler
+  // Google Sign-In Handler - FIXED with your exact code
   const handleGoogleSignIn = async (googleData) => {
     setActionLoading(true);
     try {
@@ -245,7 +205,7 @@ function App() {
     return () => clearInterval(interval);
   }, [otpTimer]);
 
-  // Network selection effect - FIXED: Fetch data plans from API
+  // Network selection effect
   useEffect(() => {
     if (selectedNetwork && isLoggedIn) {
       console.log('Fetching data plans for network:', selectedNetwork);
@@ -277,18 +237,63 @@ function App() {
     }
   };
 
-  // SIMPLIFIED PWA Implementation to avoid errors
+  // Enhanced PWA Implementation
   const initializePWA = async () => {
-    // Only register service worker if it doesn't exist to avoid conflicts
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      console.log('PWA: Running in standalone mode');
+    }
+
     if ('serviceWorker' in navigator) {
       try {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        if (registrations.length === 0) {
-          await navigator.serviceWorker.register('/sw.js');
-          console.log('PWA: Service Worker registered successfully');
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        console.log('PWA: Service Worker registered successfully');
+      } catch (error) {
+        console.error('PWA: Service Worker registration failed:', error);
+      }
+    }
+
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      console.log('PWA: Before install prompt event fired');
+      
+      setTimeout(() => {
+        showPWAInstallPrompt(deferredPrompt);
+      }, 5000);
+    });
+
+    window.addEventListener('appinstalled', () => {
+      console.log('PWA: App was installed');
+      deferredPrompt = null;
+      showNotification('JAYSUB installed successfully!', 'success');
+    });
+  };
+
+  const showPWAInstallPrompt = (deferredPrompt) => {
+    if (deferredPrompt && !localStorage.getItem('pwaPromptDismissed')) {
+      const shouldShowPrompt = confirm('Install JAYSUB for better experience! Would you like to install it?');
+      
+      if (shouldShowPrompt) {
+        handlePwaInstall(deferredPrompt);
+      } else {
+        localStorage.setItem('pwaPromptDismissed', 'true');
+      }
+    }
+  };
+
+  const handlePwaInstall = async (deferredPrompt) => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        if (outcome === 'accepted') {
+          console.log('PWA: User accepted the install prompt');
+          localStorage.setItem('pwaPromptDismissed', 'true');
         }
       } catch (error) {
-        console.log('PWA: Service Worker already registered or failed');
+        console.error('PWA: Install prompt failed:', error);
       }
     }
   };
@@ -429,7 +434,7 @@ function App() {
     }
   };
 
-  // FIXED: Data Plans Fetching - Removed the syntax error
+  // Enhanced Data Plans Fetching
   const fetchDataPlans = async (networkCode) => {
     if (!networkCode) {
       console.log('No network code provided for data plans');
@@ -440,9 +445,11 @@ function App() {
     try {
       const token = localStorage.getItem('jaysub_token');
       
-      // First try to fetch from API
+      // Use fallback data immediately while API call is in progress
+      const fallbackPlans = getFallbackDataPlans(networkCode);
+      setDataPlans(fallbackPlans);
+
       if (token) {
-        console.log('Fetching data plans from API for network:', networkCode);
         const response = await fetch(API_URLS.dataPlans(networkCode), {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -452,29 +459,14 @@ function App() {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Data plans fetched from API for', networkCode, ':', data);
-          
+          console.log('Data plans fetched for', networkCode, ':', data.plans);
           if (data.plans && data.plans.length > 0) {
-            console.log('Using API data plans');
             setDataPlans(data.plans);
-            return;
           }
-        } else {
-          console.log('API fetch failed, status:', response.status);
         }
-      } else {
-        console.log('No token available for data plans fetch');
       }
-      
-      // If API fails, use fallback
-      console.log('Using fallback data plans for', networkCode);
-      const fallbackPlans = getFallbackDataPlans(networkCode);
-      setDataPlans(fallbackPlans);
-      
     } catch (error) {
-      console.error('Failed to fetch data plans from API, using fallback:', error);
-      const fallbackPlans = getFallbackDataPlans(networkCode);
-      setDataPlans(fallbackPlans);
+      console.error('Failed to fetch data plans, using fallback:', error);
     } finally {
       setActionLoading(false);
     }
@@ -625,13 +617,8 @@ function App() {
     }
   };
 
-  // Resend OTP - safer implementation
+  // Resend OTP
   const handleResendOtp = async () => {
-    if (!otpEmail) {
-      showNotification('No email to resend OTP to', 'error');
-      return;
-    }
-
     setActionLoading(true);
     try {
       const response = await fetch(API_URLS.resendOtp, {
@@ -639,50 +626,27 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: otpEmail })
+        body: JSON.stringify({
+          email: otpEmail
+        })
       });
 
-      // Defensive JSON parse: only try to parse if response has JSON content-type
-      const contentType = response.headers.get('content-type') || '';
-      let data = null;
-      if (contentType.includes('application/json')) {
-        try {
-          data = await response.json();
-        } catch (parseErr) {
-          console.error('Failed to parse JSON from resendOtp response', parseErr);
-          showNotification('Failed to resend OTP (invalid server response)', 'error');
-          return;
-        }
-      } else {
-        // fallback: if no JSON body but response.ok treat as success or read text for debugging
-        const text = await response.text();
-        console.warn('resendOtp returned non-json response:', text);
-        if (response.ok) {
-          setOtpTimer(300);
-          showNotification('New OTP sent to your email!', 'success');
-          return;
-        } else {
-          showNotification('Failed to resend OTP', 'error');
-          return;
-        }
-      }
+      const data = await response.json();
 
-      if (response.ok && data && data.success) {
+      if (response.ok && data.success) {
         setOtpTimer(300);
         showNotification('New OTP sent to your email!', 'success');
       } else {
-        console.error('Resend OTP failed:', data);
-        showNotification((data && data.message) || 'Failed to resend OTP', 'error');
+        showNotification(data.message || 'Failed to resend OTP', 'error');
       }
     } catch (error) {
-      console.error('Failed to resend OTP:', error);
       showNotification('Failed to resend OTP', 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
-  // Handle login - FIXED: Added missing password field
+  // Handle login
   const handleLogin = async (e) => {
     e.preventDefault();
     setActionLoading(true);
@@ -1133,7 +1097,7 @@ function App() {
     );
   }
 
-  // Login/Signup Form - FIXED: Added missing password field and complete form
+  // Login/Signup Form
   if (!isLoggedIn) {
     return (
       <div className="auth-container">
@@ -1160,36 +1124,11 @@ function App() {
             </button>
           </div>
 
-          {/* Google Sign-in Button - FIXED with proper ref */}
+          {/* Google Sign-in Button - UPDATED with proper Google button */}
           <div className="social-auth">
-            <div 
-              ref={googleButtonRef}
-              style={{ 
-                minHeight: '44px', 
-                display: 'flex', 
-                justifyContent: 'center',
-                marginBottom: '16px'
-              }}
-            >
-              {!window.google && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  height: '44px',
-                  background: '#f8f9fa',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  color: '#666',
-                  fontSize: '14px'
-                }}>
-                  Loading Google Sign-In...
-                </div>
-              )}
-            </div>
+            <div id="googleSignInButton"></div>
           </div>
-          
+
           <div className="auth-divider">
             <span>or continue with email</span>
           </div>
@@ -1282,16 +1221,19 @@ function App() {
     );
   }
 
-  // Main App after login - FIXED: Removed greeting from header
+  // Main App after login - REST OF THE CODE REMAINS THE SAME...
+  // [The rest of your main app code remains unchanged...]
+  // Main App after login
   return (
     <div className={`app ${darkMode ? 'dark' : ''}`}>
       {actionLoading && <div className="action-preloader">Processing...</div>}
       
-      {/* Header - FIXED: Removed the greeting text */}
+      {/* Header */}
       <header className="header">
         <div className="header-content">
           <h1>JAYSUB</h1>
           <div className="user-menu">
+            <span>{greeting}, {user?.name}</span>
             <div className="wallet-badge">
               ₦{walletBalance.toLocaleString()}
             </div>
