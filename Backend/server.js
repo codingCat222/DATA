@@ -7,13 +7,18 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const path = require('path');
 const multer = require('multer');
+const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
 
 const app = express();
 
-// Middleware - Allow requests from your React app
+// Middleware - Allow requests from your React apps (both local and production)
 app.use(cors({
-    origin: 'http://localhost:5173', // Your React app URL
+    origin: [
+        'http://localhost:5173', // Your local React app
+        'https://data-iota-lovat.vercel.app', // Your Vercel frontend - ADDED THIS LINE
+        'https://data-iota-lovat.vercel.app/' // Alternative format
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -28,6 +33,12 @@ const MONGODB_URI = 'mongodb+srv://tobisamuel2024_db_user:GvYHGBlPBKkgtlyZ@clust
 mongoose.connect(MONGODB_URI)
 .then(() => console.log('✅ MongoDB Connected Successfully'))
 .catch(err => console.log('❌ MongoDB Connection Error:', err));
+
+// Google OAuth Client
+const GOOGLE_CLIENT_ID = "359926094033-rl57709vq8llcjvgc45pdljt3srp3g9n.apps.googleusercontent.com";
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+console.log('🔐 Google OAuth client initialized');
 
 // Email Transporter
 const transporter = nodemailer.createTransport({
@@ -52,7 +63,9 @@ const UserSchema = new mongoose.Schema({
     referredBy: { type: String, default: '' },
     isVerified: { type: Boolean, default: false },
     otp: { type: String },
-    otpExpires: { type: Date }
+    otpExpires: { type: Date },
+    googleId: { type: String }, // ADDED for Google OAuth
+    authMethod: { type: String, enum: ['email', 'google'], default: 'email' } // ADDED
 }, { timestamps: true });
 
 const TransactionSchema = new mongoose.Schema({
@@ -187,11 +200,105 @@ app.get('/', (req, res) => {
     res.json({ 
         message: 'JAYSUB Backend Server is running!',
         timestamp: new Date().toISOString(),
-        frontendUrl: 'http://localhost:5173',
+        frontendUrls: [ // UPDATED this to show both URLs
+            'http://localhost:5173',
+            'https://data-iota-lovat.vercel.app'
+        ],
         backendUrl: 'http://localhost:5000'
     });
 });
 
+// ADDED Google OAuth Route
+app.post('/api/auth/google', async (req, res) => {
+    try {
+        const { token } = req.body;
+
+        console.log('🔐 Google OAuth login attempt');
+
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                message: 'Google token is required'
+            });
+        }
+
+        // Verify Google token
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: GOOGLE_CLIENT_ID
+        });
+
+        const payload = ticket.getPayload();
+        const { sub: googleId, email, name, picture } = payload;
+
+        console.log('✅ Google token verified for:', email);
+
+        // Check if user exists
+        let user = await User.findOne({ 
+            $or: [{ email }, { googleId }] 
+        });
+
+        if (user) {
+            // Update user if they signed up with email first
+            if (!user.googleId) {
+                user.googleId = googleId;
+                user.authMethod = 'google';
+                await user.save();
+            }
+        } else {
+            // Create new user
+            user = new User({
+                name,
+                email,
+                googleId,
+                phone: '', // Google users might not have phone initially
+                password: '', // No password for Google auth
+                profileImage: picture,
+                referralCode: generateReferralCode(),
+                isVerified: true, // Google users are automatically verified
+                authMethod: 'google'
+            });
+            await user.save();
+            console.log('✅ New Google user created:', email);
+        }
+
+        // Generate JWT token
+        const jwtToken = jwt.sign(
+            { userId: user._id }, 
+            'jaysub_secret_key_2024', 
+            { expiresIn: '30d' }
+        );
+
+        console.log('✅ Google login successful for:', email);
+
+        res.json({
+            success: true,
+            message: 'Google login successful',
+            data: {
+                token: jwtToken,
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    phone: user.phone,
+                    walletBalance: user.walletBalance,
+                    profileImage: user.profileImage || picture,
+                    referralCode: user.referralCode,
+                    authMethod: user.authMethod
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Google OAuth error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error during Google authentication'
+        });
+    }
+});
+
+// KEEP ALL YOUR EXISTING ROUTES EXACTLY AS THEY WERE
 // Auth Routes
 app.post('/api/auth/signup', async (req, res) => {
     try {
@@ -236,7 +343,14 @@ app.post('/api/auth/signup', async (req, res) => {
         });
 
         // Handle referral logic...
-        // [Keep your existing referral code here]
+        if (referralCode) {
+            const referringUser = await User.findOne({ referralCode });
+            if (referringUser) {
+                user.referredBy = referralCode;
+                // You can add referral bonus here if needed
+                console.log('👥 User referred by:', referringUser.email);
+            }
+        }
 
         // Save user
         await user.save();
@@ -1071,8 +1185,11 @@ app.listen(PORT, () => {
     console.log('🚀 Server starting...');
     console.log('📍 Server running on port', PORT);
     console.log('🌐 Backend URL: http://localhost:' + PORT);
-    console.log('🎯 Frontend URL: http://localhost:5173');
+    console.log('🎯 Frontend URLs:');
+    console.log('   - Local: http://localhost:5173');
+    console.log('   - Production: https://data-iota-lovat.vercel.app'); // UPDATED
     console.log('📧 Email service: Ready');
+    console.log('🔐 Google OAuth: Ready'); // ADDED
     console.log('🗄️ Database: Connected');
     console.log('⏰ Starting initialization...');
     
