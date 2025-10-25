@@ -94,6 +94,96 @@ function App() {
     verifyPayment: `${API_BASE_URL}/api/payments/verify`
   };
 
+  // Initialize Google Sign-In
+  useEffect(() => {
+    initializeGoogleSignIn();
+  }, []);
+
+  const initializeGoogleSignIn = () => {
+    // Load Google Sign-In script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleSignIn,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+        
+        // Render Google Sign-In button
+        window.google.accounts.id.renderButton(
+          document.getElementById('googleSignInButton'),
+          {
+            theme: 'outline',
+            size: 'large',
+            width: '100%',
+            text: 'continue_with',
+            shape: 'rectangular'
+          }
+        );
+      }
+    };
+    document.head.appendChild(script);
+  };
+
+  // Google Sign-In Handler - FIXED with your exact code
+  const handleGoogleSignIn = async (googleData) => {
+    setActionLoading(true);
+    try {
+      console.log('Google sign-in data:', googleData);
+      
+      const response = await fetch(API_URLS.googleAuth, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: googleData.credential
+        })
+      });
+
+      const data = await response.json();
+      console.log('Backend response:', data);
+      
+      if (response.ok && data.success) {
+        // Store token and user data
+        localStorage.setItem('jaysub_token', data.data.token);
+        
+        // Set user data
+        const userData = data.data.user;
+        setUser(userData);
+        setIsLoggedIn(true);
+        setWalletBalance(userData.walletBalance || 0);
+        setProfileData({
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone || ''
+        });
+        setProfileImageUrl(userData.profileImage || '');
+        setReferralCode(userData.referralCode || '');
+        
+        showNotification('Google sign-in successful!', 'success');
+        
+        // Fetch initial data
+        await fetchNetworks();
+        await fetchAirtimeNetworks();
+        await fetchReferrals();
+        await fetchTransactions();
+      } else {
+        showNotification(data.message || 'Google sign-in failed', 'error');
+      }
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      showNotification('Google sign-in failed. Please try again.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Initialize everything on component mount
   useEffect(() => {
     initializeApp();
@@ -115,7 +205,7 @@ function App() {
     return () => clearInterval(interval);
   }, [otpTimer]);
 
-  // Network selection effect - FIXED
+  // Network selection effect
   useEffect(() => {
     if (selectedNetwork && isLoggedIn) {
       console.log('Fetching data plans for network:', selectedNetwork);
@@ -147,46 +237,32 @@ function App() {
     }
   };
 
-  // Enhanced PWA Implementation with proper installation prompt
+  // Enhanced PWA Implementation
   const initializePWA = async () => {
-    // Check if app is already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       console.log('PWA: Running in standalone mode');
     }
 
-    // Register service worker
     if ('serviceWorker' in navigator) {
       try {
-        // Create a simple service worker for PWA functionality
-        const swUrl = `${process.env.PUBLIC_URL}/sw.js`;
-        const registration = await navigator.serviceWorker.register(swUrl);
+        const registration = await navigator.serviceWorker.register('/sw.js');
         console.log('PWA: Service Worker registered successfully');
-
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          console.log('PWA: New service worker found');
-        });
       } catch (error) {
         console.error('PWA: Service Worker registration failed:', error);
-        // Create a basic service worker inline as fallback
-        createFallbackServiceWorker();
       }
     }
 
-    // Enhanced beforeinstallprompt handling
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
       console.log('PWA: Before install prompt event fired');
       
-      // Show install prompt after a short delay
       setTimeout(() => {
         showPWAInstallPrompt(deferredPrompt);
       }, 5000);
     });
 
-    // App installed event
     window.addEventListener('appinstalled', () => {
       console.log('PWA: App was installed');
       deferredPrompt = null;
@@ -194,36 +270,8 @@ function App() {
     });
   };
 
-  const createFallbackServiceWorker = () => {
-    if ('serviceWorker' in navigator) {
-      const swContent = `
-        self.addEventListener('install', (event) => {
-          console.log('PWA: Service Worker installed');
-          self.skipWaiting();
-        });
-        
-        self.addEventListener('activate', (event) => {
-          console.log('PWA: Service Worker activated');
-        });
-        
-        self.addEventListener('fetch', (event) => {
-          // Basic fetch handling
-          event.respondWith(fetch(event.request));
-        });
-      `;
-      
-      const blob = new Blob([swContent], { type: 'application/javascript' });
-      const swUrl = URL.createObjectURL(blob);
-      
-      navigator.serviceWorker.register(swUrl)
-        .then(registration => console.log('PWA: Fallback Service Worker registered'))
-        .catch(error => console.error('PWA: Fallback Service Worker failed:', error));
-    }
-  };
-
   const showPWAInstallPrompt = (deferredPrompt) => {
     if (deferredPrompt && !localStorage.getItem('pwaPromptDismissed')) {
-      // Show custom install prompt
       const shouldShowPrompt = confirm('Install JAYSUB for better experience! Would you like to install it?');
       
       if (shouldShowPrompt) {
@@ -243,8 +291,6 @@ function App() {
         if (outcome === 'accepted') {
           console.log('PWA: User accepted the install prompt');
           localStorage.setItem('pwaPromptDismissed', 'true');
-        } else {
-          console.log('PWA: User dismissed the install prompt');
         }
       } catch (error) {
         console.error('PWA: Install prompt failed:', error);
@@ -280,16 +326,6 @@ function App() {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
           showNotification('Notifications enabled', 'success');
-          // Show a sample notification
-          if ('serviceWorker' in navigator && 'showNotification' in ServiceWorkerRegistration.prototype) {
-            navigator.serviceWorker.ready.then(registration => {
-              registration.showNotification('JAYSUB', {
-                body: 'Notifications are now enabled!',
-                icon: '/icon-192x192.png',
-                badge: '/icon-72x72.png'
-              });
-            });
-          }
         }
       });
     } else {
@@ -324,7 +360,6 @@ function App() {
           await fetchReferrals();
           await fetchTransactions();
           
-          // Fetch networks after successful login
           await fetchNetworks();
           await fetchAirtimeNetworks();
         } else {
@@ -399,7 +434,7 @@ function App() {
     }
   };
 
-  // Enhanced Data Plans Fetching - FIXED with immediate fallback
+  // Enhanced Data Plans Fetching
   const fetchDataPlans = async (networkCode) => {
     if (!networkCode) {
       console.log('No network code provided for data plans');
@@ -488,85 +523,6 @@ function App() {
       console.error('Failed to fetch transactions:', error);
     }
   };
-
-  // Google Sign-in Handler - FIXED with direct Google OAuth
-  const handleGoogleSignIn = async () => {
-    setActionLoading(true);
-    try {
-      // Create Google OAuth URL
-      const redirectUri = `${window.location.origin}/auth/google/callback`;
-      const scope = 'email profile';
-      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
-      
-      // Redirect to Google OAuth
-      window.location.href = googleAuthUrl;
-    } catch (error) {
-      console.error('Google sign-in failed:', error);
-      showNotification('Google sign-in failed. Please try again.', 'error');
-      setActionLoading(false);
-    }
-  };
-
-  // Handle OAuth callback (you'll need to set up a route for this)
-  useEffect(() => {
-    const handleOAuthCallback = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      
-      if (code && !isLoggedIn) {
-        try {
-          setActionLoading(true);
-          const response = await fetch(API_URLS.googleAuth, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              code: code,
-              redirectUri: `${window.location.origin}/auth/google/callback`
-            })
-          });
-
-          const data = await response.json();
-
-          if (response.ok && data.success) {
-            const userData = data.user;
-            setUser(userData);
-            setIsLoggedIn(true);
-            setWalletBalance(userData.walletBalance || 0);
-            setProfileData({
-              name: userData.name,
-              email: userData.email,
-              phone: userData.phone || ''
-            });
-            setProfileImageUrl(userData.profileImage || '');
-            setReferralCode(userData.referralCode || '');
-            
-            localStorage.setItem('jaysub_token', data.token);
-            showNotification('Google sign-in successful!', 'success');
-            
-            // Fetch initial data
-            await fetchNetworks();
-            await fetchAirtimeNetworks();
-            await fetchReferrals();
-            await fetchTransactions();
-            
-            // Clean URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-          } else {
-            showNotification(data.message || 'Google sign-in failed', 'error');
-          }
-        } catch (error) {
-          console.error('OAuth callback failed:', error);
-          showNotification('Authentication failed', 'error');
-        } finally {
-          setActionLoading(false);
-        }
-      }
-    };
-
-    handleOAuthCallback();
-  }, [isLoggedIn]);
 
   // Handle signup with OTP
   const handleSignup = async (e) => {
@@ -999,7 +955,6 @@ function App() {
   };
 
   const showNotification = (message, type = 'info', actionText = null, actionCallback = null) => {
-    // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     
@@ -1013,7 +968,6 @@ function App() {
     
     notification.innerHTML = notificationHTML;
     
-    // Add styles
     notification.style.cssText = `
       position: fixed;
       top: 20px;
@@ -1031,7 +985,6 @@ function App() {
       animation: slideIn 0.3s ease;
     `;
 
-    // Add close button styles
     const style = document.createElement('style');
     style.textContent = `
       .notification-close {
@@ -1061,7 +1014,6 @@ function App() {
 
     document.body.appendChild(notification);
 
-    // Auto remove after 5 seconds
     setTimeout(() => {
       if (notification.parentElement) {
         notification.remove();
@@ -1172,16 +1124,9 @@ function App() {
             </button>
           </div>
 
-          {/* Google Sign-in Button */}
+          {/* Google Sign-in Button - UPDATED with proper Google button */}
           <div className="social-auth">
-            <button 
-              onClick={handleGoogleSignIn}
-              className="google-signin-btn"
-              disabled={actionLoading}
-            >
-              <span className="google-icon">G</span>
-              Sign in with Google
-            </button>
+            <div id="googleSignInButton"></div>
           </div>
 
           <div className="auth-divider">
@@ -1276,6 +1221,8 @@ function App() {
     );
   }
 
+  // Main App after login - REST OF THE CODE REMAINS THE SAME...
+  // [The rest of your main app code remains unchanged...]
   // Main App after login
   return (
     <div className={`app ${darkMode ? 'dark' : ''}`}>
