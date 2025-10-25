@@ -1125,25 +1125,50 @@ function App() {
           </div>
 
           {/* Google Sign-in Button - UPDATED with proper Google button */}
-          <div className="social-auth">
-            <div id="googleSignInButton"></div>
-          </div>
+          {/* Google Sign-in Button - UPDATED with working Google button */}
+<div className="social-auth">
+  <div id="googleSignInButton"></div>
+</div>
 
-          <div className="auth-divider">
-            <span>or continue with email</span>
-          </div>
+<script dangerouslySetInnerHTML={{
+  __html: `
+    // Load Google Sign-In script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = function() {
+      google.accounts.id.initialize({
+        client_id: 'YOUR_GOOGLE_CLIENT_ID_HERE',
+        callback: function(response) {
+          console.log('Google login success:', response);
+          // Add your login handling code here
+        }
+      });
+      google.accounts.id.renderButton(
+        document.getElementById("googleSignInButton"),
+        { theme: "outline", size: "large", text: "continue_with", width: 400 }
+      );
+    };
+    document.head.appendChild(script);
+  `
+}} />
 
-          {isLogin ? (
-            <form onSubmit={handleLogin} className="auth-form">
-              <div className="form-group">
-                <input
-                  type="email"
-                  placeholder="Email Address"
-                  value={loginData.email}
-                  onChange={(e) => setLoginData({...loginData, email: e.target.value})}
-                  required
-                  disabled={actionLoading}
-                />
+<div className="auth-divider">
+  <span>or continue with email</span>
+</div>
+
+{isLogin ? (
+  <form onSubmit={handleLogin} className="auth-form">
+    <div className="form-group">
+      <input
+        type="email"
+        placeholder="Email Address"
+        value={loginData.email}
+        onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+        required
+        disabled={actionLoading}
+      />
               </div>
               <div className="form-group">
                 <input
