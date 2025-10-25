@@ -1269,17 +1269,16 @@ function App() {
     );
   }
 
-  // Main App after login
+  // Main App after login - FIXED: Removed greeting from header
   return (
     <div className={`app ${darkMode ? 'dark' : ''}`}>
       {actionLoading && <div className="action-preloader">Processing...</div>}
       
-      {/* Header */}
+      {/* Header - FIXED: Removed the greeting text */}
       <header className="header">
         <div className="header-content">
           <h1>JAYSUB</h1>
           <div className="user-menu">
-            <span>{greeting}, {user?.name}</span>
             <div className="wallet-badge">
               ₦{walletBalance.toLocaleString()}
             </div>
