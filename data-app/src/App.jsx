@@ -24,8 +24,8 @@ function App() {
   const [otpTimer, setOtpTimer] = useState(0);
 
   // Service products
-  const [selectedNetwork, setSelectedNetwork] = useState('');
-  const [selectedAirtimeNetwork, setSelectedAirtimeNetwork] = useState('');
+  const [selectedNetwork, setSelectedNetwork] = useState('mtn');
+  const [selectedAirtimeNetwork, setSelectedAirtimeNetwork] = useState('mtn');
   const [selectedPlan, setSelectedPlan] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [airtimePhoneNumber, setAirtimePhoneNumber] = useState('');
@@ -34,9 +34,19 @@ function App() {
   const [currentPurchase, setCurrentPurchase] = useState(null);
 
   // API Data states
-  const [networks, setNetworks] = useState([]);
+  const [networks, setNetworks] = useState([
+    { code: 'mtn', name: 'MTN Nigeria' },
+    { code: 'airtel', name: 'Airtel Nigeria' },
+    { code: 'glo', name: 'Glo Nigeria' },
+    { code: 'etisalat', name: '9mobile Nigeria' }
+  ]);
   const [dataPlans, setDataPlans] = useState([]);
-  const [airtimeNetworks, setAirtimeNetworks] = useState([]);
+  const [airtimeNetworks, setAirtimeNetworks] = useState([
+    { code: 'mtn', name: 'MTN Nigeria' },
+    { code: 'airtel', name: 'Airtel Nigeria' },
+    { code: 'glo', name: 'Glo Nigeria' },
+    { code: 'etisalat', name: '9mobile Nigeria' }
+  ]);
 
   // Profile states
   const [profileData, setProfileData] = useState({
@@ -57,27 +67,31 @@ function App() {
   const [referrals, setReferrals] = useState([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  // API URLs
+  // Google Client ID
+  const GOOGLE_CLIENT_ID = "359926094033-rl57709vq8llcjvgc45pdljt3srp3g9n.apps.googleusercontent.com";
+
+  // API URLs - Updated to your backend
+  const API_BASE_URL = 'https://data-dqrk.onrender.com';
   const API_URLS = {
-    login: 'http://localhost:5000/api/auth/login',
-    signup: 'http://localhost:5000/api/auth/signup',
-    verifyOtp: 'http://localhost:5000/api/auth/verify-otp',
-    resendOtp: 'http://localhost:5000/api/auth/resend-otp',
-    googleAuth: 'http://localhost:5000/api/auth/google',
-    profile: 'http://localhost:5000/api/user/profile',
-    updateProfile: 'http://localhost:5000/api/user/update-profile',
-    changePassword: 'http://localhost:5000/api/user/change-password',
-    uploadProfileImage: 'http://localhost:5000/api/user/upload-profile-image',
-    referrals: 'http://localhost:5000/api/user/referrals',
-    wallet: 'http://localhost:5000/api/wallet',
-    fundWallet: 'http://localhost:5000/api/wallet/fund',
-    transactions: 'http://localhost:5000/api/wallet/transactions',
-    services: 'http://localhost:5000/api/services',
-    dataPlans: (network) => `http://localhost:5000/api/services/data-plans/${network}`,
-    airtimeNetworks: 'http://localhost:5000/api/services/airtime-networks',
-    purchase: 'http://localhost:5000/api/purchase',
-    initializePayment: 'http://localhost:5000/api/payments/initialize',
-    verifyPayment: 'http://localhost:5000/api/payments/verify'
+    login: `${API_BASE_URL}/api/auth/login`,
+    signup: `${API_BASE_URL}/api/auth/signup`,
+    verifyOtp: `${API_BASE_URL}/api/auth/verify-otp`,
+    resendOtp: `${API_BASE_URL}/api/auth/resend-otp`,
+    googleAuth: `${API_BASE_URL}/api/auth/google`,
+    profile: `${API_BASE_URL}/api/user/profile`,
+    updateProfile: `${API_BASE_URL}/api/user/update-profile`,
+    changePassword: `${API_BASE_URL}/api/user/change-password`,
+    uploadProfileImage: `${API_BASE_URL}/api/user/upload-profile-image`,
+    referrals: `${API_BASE_URL}/api/user/referrals`,
+    wallet: `${API_BASE_URL}/api/wallet`,
+    fundWallet: `${API_BASE_URL}/api/wallet/fund`,
+    transactions: `${API_BASE_URL}/api/wallet/transactions`,
+    services: `${API_BASE_URL}/api/services`,
+    dataPlans: (network) => `${API_BASE_URL}/api/services/data-plans/${network}`,
+    airtimeNetworks: `${API_BASE_URL}/api/services/airtime-networks`,
+    purchase: `${API_BASE_URL}/api/purchase`,
+    initializePayment: `${API_BASE_URL}/api/payments/initialize`,
+    verifyPayment: `${API_BASE_URL}/api/payments/verify`
   };
 
   // Initialize everything on component mount
@@ -101,9 +115,10 @@ function App() {
     return () => clearInterval(interval);
   }, [otpTimer]);
 
-  // Network selection effect
+  // Network selection effect - FIXED
   useEffect(() => {
     if (selectedNetwork && isLoggedIn) {
+      console.log('Fetching data plans for network:', selectedNetwork);
       fetchDataPlans(selectedNetwork);
     }
   }, [selectedNetwork, isLoggedIn]);
@@ -124,10 +139,6 @@ function App() {
       await initializePWA();
       checkDarkMode();
       await checkAuthStatus();
-      if (isLoggedIn) {
-        await fetchNetworks();
-        await fetchAirtimeNetworks();
-      }
     } catch (error) {
       console.error('App initialization failed:', error);
       showNotification('Failed to initialize app', 'error');
@@ -136,91 +147,108 @@ function App() {
     }
   };
 
-  // Enhanced PWA Implementation
+  // Enhanced PWA Implementation with proper installation prompt
   const initializePWA = async () => {
     // Check if app is already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       console.log('PWA: Running in standalone mode');
     }
 
-    // Register service worker with enhanced error handling
+    // Register service worker
     if ('serviceWorker' in navigator) {
       try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
+        // Create a simple service worker for PWA functionality
+        const swUrl = `${process.env.PUBLIC_URL}/sw.js`;
+        const registration = await navigator.serviceWorker.register(swUrl);
         console.log('PWA: Service Worker registered successfully');
 
-        // Check for updates
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           console.log('PWA: New service worker found');
-          
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              showNotification('New version available! Refresh to update.', 'info');
-            }
-          });
         });
       } catch (error) {
         console.error('PWA: Service Worker registration failed:', error);
-        // Fallback: Create a basic service worker registration
-        try {
-          const registration = await navigator.serviceWorker.register('/sw-fallback.js');
-          console.log('PWA: Fallback Service Worker registered');
-        } catch (fallbackError) {
-          console.error('PWA: Fallback Service Worker also failed');
-        }
+        // Create a basic service worker inline as fallback
+        createFallbackServiceWorker();
       }
     }
 
     // Enhanced beforeinstallprompt handling
+    let deferredPrompt;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
-      window.deferredPrompt = e;
+      deferredPrompt = e;
+      console.log('PWA: Before install prompt event fired');
       
       // Show install prompt after a short delay
       setTimeout(() => {
-        showPWAInstallPrompt();
-      }, 3000);
+        showPWAInstallPrompt(deferredPrompt);
+      }, 5000);
     });
 
     // App installed event
     window.addEventListener('appinstalled', () => {
       console.log('PWA: App was installed');
-      window.deferredPrompt = null;
+      deferredPrompt = null;
       showNotification('JAYSUB installed successfully!', 'success');
     });
-
-    // Check if PWA is launchable
-    if ('getInstalledRelatedApps' in navigator) {
-      navigator.getInstalledRelatedApps().then(apps => {
-        if (apps.length > 0) {
-          console.log('PWA: App is already installed');
-        }
-      });
-    }
   };
 
-  const showPWAInstallPrompt = () => {
-    if (window.deferredPrompt && !localStorage.getItem('pwaPromptDismissed')) {
-      showNotification(
-        'Install JAYSUB for better experience! 📱', 
-        'info', 
-        'Install', 
-        handlePwaInstall
-      );
-    }
-  };
-
-  const handlePwaInstall = async () => {
-    if (window.deferredPrompt) {
-      window.deferredPrompt.prompt();
-      const { outcome } = await window.deferredPrompt.userChoice;
+  const createFallbackServiceWorker = () => {
+    if ('serviceWorker' in navigator) {
+      const swContent = `
+        self.addEventListener('install', (event) => {
+          console.log('PWA: Service Worker installed');
+          self.skipWaiting();
+        });
+        
+        self.addEventListener('activate', (event) => {
+          console.log('PWA: Service Worker activated');
+        });
+        
+        self.addEventListener('fetch', (event) => {
+          // Basic fetch handling
+          event.respondWith(fetch(event.request));
+        });
+      `;
       
-      if (outcome === 'accepted') {
-        console.log('PWA: User accepted the install prompt');
+      const blob = new Blob([swContent], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(blob);
+      
+      navigator.serviceWorker.register(swUrl)
+        .then(registration => console.log('PWA: Fallback Service Worker registered'))
+        .catch(error => console.error('PWA: Fallback Service Worker failed:', error));
+    }
+  };
+
+  const showPWAInstallPrompt = (deferredPrompt) => {
+    if (deferredPrompt && !localStorage.getItem('pwaPromptDismissed')) {
+      // Show custom install prompt
+      const shouldShowPrompt = confirm('Install JAYSUB for better experience! Would you like to install it?');
+      
+      if (shouldShowPrompt) {
+        handlePwaInstall(deferredPrompt);
+      } else {
         localStorage.setItem('pwaPromptDismissed', 'true');
       }
-      window.deferredPrompt = null;
+    }
+  };
+
+  const handlePwaInstall = async (deferredPrompt) => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        if (outcome === 'accepted') {
+          console.log('PWA: User accepted the install prompt');
+          localStorage.setItem('pwaPromptDismissed', 'true');
+        } else {
+          console.log('PWA: User dismissed the install prompt');
+        }
+      } catch (error) {
+        console.error('PWA: Install prompt failed:', error);
+      }
     }
   };
 
@@ -252,10 +280,16 @@ function App() {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
           showNotification('Notifications enabled', 'success');
-          new Notification('JAYSUB', {
-            body: 'Notifications are now enabled!',
-            icon: '/icon-192x192.png'
-          });
+          // Show a sample notification
+          if ('serviceWorker' in navigator && 'showNotification' in ServiceWorkerRegistration.prototype) {
+            navigator.serviceWorker.ready.then(registration => {
+              registration.showNotification('JAYSUB', {
+                body: 'Notifications are now enabled!',
+                icon: '/icon-192x192.png',
+                badge: '/icon-72x72.png'
+              });
+            });
+          }
         }
       });
     } else {
@@ -289,6 +323,10 @@ function App() {
           setReferralCode(userData.referralCode || '');
           await fetchReferrals();
           await fetchTransactions();
+          
+          // Fetch networks after successful login
+          await fetchNetworks();
+          await fetchAirtimeNetworks();
         } else {
           localStorage.removeItem('jaysub_token');
         }
@@ -303,6 +341,11 @@ function App() {
   const fetchNetworks = async () => {
     try {
       const token = localStorage.getItem('jaysub_token');
+      if (!token) {
+        console.log('No token available for network fetch, using fallback');
+        return;
+      }
+
       const response = await fetch(API_URLS.services, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -312,24 +355,16 @@ function App() {
 
       if (response.ok) {
         const data = await response.json();
-        setNetworks(data.networks || []);
-        
+        console.log('Networks fetched from API:', data.networks);
         if (data.networks && data.networks.length > 0) {
+          setNetworks(data.networks);
           setSelectedNetwork(data.networks[0].code);
         }
       } else {
-        throw new Error('Failed to fetch networks');
+        console.log('Using fallback networks');
       }
     } catch (error) {
-      console.error('Failed to fetch networks:', error);
-      // Fallback networks
-      setNetworks([
-        { code: 'mtn', name: 'MTN Nigeria' },
-        { code: 'airtel', name: 'Airtel Nigeria' },
-        { code: 'glo', name: 'Glo Nigeria' },
-        { code: 'etisalat', name: '9mobile Nigeria' }
-      ]);
-      setSelectedNetwork('mtn');
+      console.error('Failed to fetch networks, using fallback:', error);
     }
   };
 
@@ -337,6 +372,11 @@ function App() {
   const fetchAirtimeNetworks = async () => {
     try {
       const token = localStorage.getItem('jaysub_token');
+      if (!token) {
+        console.log('No token available for airtime networks fetch, using fallback');
+        return;
+      }
+
       const response = await fetch(API_URLS.airtimeNetworks, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -346,58 +386,87 @@ function App() {
 
       if (response.ok) {
         const data = await response.json();
-        setAirtimeNetworks(data.networks || []);
-        
+        console.log('Airtime networks fetched from API:', data.networks);
         if (data.networks && data.networks.length > 0) {
+          setAirtimeNetworks(data.networks);
           setSelectedAirtimeNetwork(data.networks[0].code);
         }
       } else {
-        throw new Error('Failed to fetch airtime networks');
+        console.log('Using fallback airtime networks');
       }
     } catch (error) {
-      console.error('Failed to fetch airtime networks:', error);
-      // Fallback airtime networks
-      setAirtimeNetworks([
-        { code: 'mtn', name: 'MTN Nigeria' },
-        { code: 'airtel', name: 'Airtel Nigeria' },
-        { code: 'glo', name: 'Glo Nigeria' },
-        { code: 'etisalat', name: '9mobile Nigeria' }
-      ]);
-      setSelectedAirtimeNetwork('mtn');
+      console.error('Failed to fetch airtime networks, using fallback:', error);
     }
   };
 
-  // Enhanced Data Plans Fetching
+  // Enhanced Data Plans Fetching - FIXED with immediate fallback
   const fetchDataPlans = async (networkCode) => {
-    if (!networkCode) return;
+    if (!networkCode) {
+      console.log('No network code provided for data plans');
+      return;
+    }
     
     setActionLoading(true);
     try {
       const token = localStorage.getItem('jaysub_token');
-      const response = await fetch(API_URLS.dataPlans(networkCode), {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      
+      // Use fallback data immediately while API call is in progress
+      const fallbackPlans = getFallbackDataPlans(networkCode);
+      setDataPlans(fallbackPlans);
 
-      if (response.ok) {
-        const data = await response.json();
-        setDataPlans(data.plans || []);
-      } else {
-        throw new Error('Failed to fetch data plans');
+      if (token) {
+        const response = await fetch(API_URLS.dataPlans(networkCode), {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Data plans fetched for', networkCode, ':', data.plans);
+          if (data.plans && data.plans.length > 0) {
+            setDataPlans(data.plans);
+          }
+        }
       }
     } catch (error) {
-      console.error('Failed to fetch data plans:', error);
-      // Fallback data plans
-      setDataPlans([
-        { id: '1gb', name: '1GB', price: 300 },
-        { id: '2gb', name: '2GB', price: 500 },
-        { id: '5gb', name: '5GB', price: 1000 }
-      ]);
+      console.error('Failed to fetch data plans, using fallback:', error);
     } finally {
       setActionLoading(false);
     }
+  };
+
+  // Helper function for fallback data plans
+  const getFallbackDataPlans = (networkCode) => {
+    const fallbackPlans = {
+      'mtn': [
+        { id: 'mtn-1gb', name: '1GB', price: 300, validity: '30 days' },
+        { id: 'mtn-2gb', name: '2GB', price: 500, validity: '30 days' },
+        { id: 'mtn-5gb', name: '5GB', price: 1000, validity: '30 days' },
+        { id: 'mtn-10gb', name: '10GB', price: 2000, validity: '30 days' }
+      ],
+      'airtel': [
+        { id: 'airtel-1gb', name: '1GB', price: 320, validity: '30 days' },
+        { id: 'airtel-2gb', name: '2GB', price: 520, validity: '30 days' },
+        { id: 'airtel-5gb', name: '5GB', price: 1020, validity: '30 days' },
+        { id: 'airtel-10gb', name: '10GB', price: 2020, validity: '30 days' }
+      ],
+      'glo': [
+        { id: 'glo-1gb', name: '1GB', price: 280, validity: '30 days' },
+        { id: 'glo-2gb', name: '2GB', price: 480, validity: '30 days' },
+        { id: 'glo-5gb', name: '5GB', price: 980, validity: '30 days' },
+        { id: 'glo-10gb', name: '10GB', price: 1980, validity: '30 days' }
+      ],
+      'etisalat': [
+        { id: 'etisalat-1gb', name: '1GB', price: 310, validity: '30 days' },
+        { id: 'etisalat-2gb', name: '2GB', price: 510, validity: '30 days' },
+        { id: 'etisalat-5gb', name: '5GB', price: 1010, validity: '30 days' },
+        { id: 'etisalat-10gb', name: '10GB', price: 2010, validity: '30 days' }
+      ]
+    };
+    
+    return fallbackPlans[networkCode] || [];
   };
 
   // Fetch transactions
@@ -420,12 +489,16 @@ function App() {
     }
   };
 
-  // Google Sign-in Handler
+  // Google Sign-in Handler - FIXED with direct Google OAuth
   const handleGoogleSignIn = async () => {
     setActionLoading(true);
     try {
-      // Open Google OAuth in new window or redirect
-      const googleAuthUrl = `${API_URLS.googleAuth}?redirect=${encodeURIComponent(window.location.origin)}`;
+      // Create Google OAuth URL
+      const redirectUri = `${window.location.origin}/auth/google/callback`;
+      const scope = 'email profile';
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+      
+      // Redirect to Google OAuth
       window.location.href = googleAuthUrl;
     } catch (error) {
       console.error('Google sign-in failed:', error);
@@ -433,6 +506,67 @@ function App() {
       setActionLoading(false);
     }
   };
+
+  // Handle OAuth callback (you'll need to set up a route for this)
+  useEffect(() => {
+    const handleOAuthCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      
+      if (code && !isLoggedIn) {
+        try {
+          setActionLoading(true);
+          const response = await fetch(API_URLS.googleAuth, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              code: code,
+              redirectUri: `${window.location.origin}/auth/google/callback`
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            const userData = data.user;
+            setUser(userData);
+            setIsLoggedIn(true);
+            setWalletBalance(userData.walletBalance || 0);
+            setProfileData({
+              name: userData.name,
+              email: userData.email,
+              phone: userData.phone || ''
+            });
+            setProfileImageUrl(userData.profileImage || '');
+            setReferralCode(userData.referralCode || '');
+            
+            localStorage.setItem('jaysub_token', data.token);
+            showNotification('Google sign-in successful!', 'success');
+            
+            // Fetch initial data
+            await fetchNetworks();
+            await fetchAirtimeNetworks();
+            await fetchReferrals();
+            await fetchTransactions();
+            
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } else {
+            showNotification(data.message || 'Google sign-in failed', 'error');
+          }
+        } catch (error) {
+          console.error('OAuth callback failed:', error);
+          showNotification('Authentication failed', 'error');
+        } finally {
+          setActionLoading(false);
+        }
+      }
+    };
+
+    handleOAuthCallback();
+  }, [isLoggedIn]);
 
   // Handle signup with OTP
   const handleSignup = async (e) => {
@@ -462,7 +596,7 @@ function App() {
       if (response.ok && data.success) {
         setOtpEmail(signupData.email);
         setShowOtpModal(true);
-        setOtpTimer(300); // 5 minutes
+        setOtpTimer(300);
         showNotification('OTP sent to your email!', 'success');
       } else {
         showNotification(data.message || 'Signup failed', 'error');
@@ -638,7 +772,6 @@ function App() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Redirect to payment page or handle payment gateway
         window.location.href = data.paymentUrl;
       } else {
         showNotification(data.message || 'Payment initialization failed', 'error');
@@ -692,7 +825,6 @@ function App() {
         const updatedUser = { ...user, walletBalance: newBalance };
         setUser(updatedUser);
         
-        // Add to transactions
         const description = type === 'data' 
           ? `${getNetworkName(targetNetwork)} Data - ${planName}`
           : `${getNetworkName(targetNetwork)} Airtime`;
@@ -700,7 +832,6 @@ function App() {
         addTransaction('debit', amount, description, data.reference);
         showNotification(`Purchase successful for ${targetPhone}!`, 'success');
         
-        // Reset forms
         setPhoneNumber('');
         setAirtimePhoneNumber('');
         setAirtimeAmount('');
@@ -1285,17 +1416,22 @@ function App() {
         {currentView === 'data' && (
           <div className="service-page">
             <h2>Buy Data</h2>
+            
             {actionLoading && <div className="loading-text">Loading data plans...</div>}
+            
             <div className="service-form">
+              {/* Network Selection - FIXED with immediate fallback */}
               <div className="form-group">
-                <label>Select Network</label>
+                <label>Select Network Provider</label>
                 <select 
                   value={selectedNetwork} 
                   onChange={(e) => {
+                    console.log('Network changed to:', e.target.value);
                     setSelectedNetwork(e.target.value);
-                    fetchDataPlans(e.target.value);
+                    setSelectedPlan(''); // Reset selected plan when network changes
                   }}
                   disabled={actionLoading}
+                  className="network-select"
                 >
                   {networks.map(network => (
                     <option key={network.code} value={network.code}>
@@ -1329,11 +1465,15 @@ function App() {
                         <div className="plan-info">
                           <h4>{plan.name}</h4>
                           <p className="plan-price">₦{plan.price}</p>
+                          {plan.validity && <small className="plan-validity">{plan.validity}</small>}
                         </div>
                         {selectedPlan === plan.id && (
                           <button 
                             className="buy-now-btn"
-                            onClick={() => handlePurchase('data', plan.price, plan.name)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePurchase('data', plan.price, plan.name);
+                            }}
                             disabled={!phoneNumber || actionLoading}
                           >
                             {actionLoading ? 'Processing...' : 'Buy Now'}
@@ -1345,7 +1485,7 @@ function App() {
                 ) : (
                   <div className="empty-state">
                     <p>No data plans available</p>
-                    <small>Please select a network</small>
+                    <small>Please select a network to see available plans</small>
                   </div>
                 )}
               </div>
@@ -1356,13 +1496,15 @@ function App() {
         {currentView === 'airtime' && (
           <div className="service-page">
             <h2>Buy Airtime</h2>
+            
             <div className="service-form">
               <div className="form-group">
-                <label>Select Network</label>
+                <label>Select Network Provider</label>
                 <select 
                   value={selectedAirtimeNetwork} 
                   onChange={(e) => setSelectedAirtimeNetwork(e.target.value)}
                   disabled={actionLoading}
+                  className="network-select"
                 >
                   {airtimeNetworks.map(network => (
                     <option key={network.code} value={network.code}>
