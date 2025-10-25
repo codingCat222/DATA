@@ -1125,47 +1125,70 @@ function App() {
           </div>
 
           {/* Google Sign-in Button - UPDATED with proper Google button */}
-          
-              </div>
-              <div className="form-group">
-                <input
-                  type="email"
-                  placeholder="Email Address"
-                  value={signupData.email}
-                  onChange={(e) => setSignupData({...signupData, email: e.target.value})}
-                  required
-                  disabled={actionLoading}
-                />
-              </div>
-              <div className="form-group">
-                <input
-                  type="tel"
-                  placeholder="Phone Number"
-                  value={signupData.phone}
-                  onChange={(e) => setSignupData({...signupData, phone: e.target.value})}
-                  required
-                  disabled={actionLoading}
-                />
-              </div>
-              <div className="form-group">
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={signupData.password}
-                  onChange={(e) => setSignupData({...signupData, password: e.target.value})}
-                  required
-                  disabled={actionLoading}
-                />
-              </div>
-              <div className="form-group">
-                <input
-                  type="password"
-                  placeholder="Confirm Password"
-                  value={signupData.confirmPassword}
-                  onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})}
-                  required
-                  disabled={actionLoading}
-                />
+          {/* Google Sign-in Button - UPDATED with working Google button */}
+<div className="social-auth">
+  <div id="googleSignInButton"></div>
+</div>
+
+<script dangerouslySetInnerHTML={{
+  __html: `
+    function loadGoogleSignIn() {
+      if (window.google && document.getElementById('googleSignInButton').children.length > 0) {
+        return;
+      }
+      
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = function() {
+        if (window.google) {
+          google.accounts.id.initialize({
+            client_id: 'YOUR_ACTUAL_GOOGLE_CLIENT_ID', // REPLACE THIS
+            callback: function(response) {
+              console.log('Google login success:', response);
+              // Add your login handling code here
+            }
+          });
+          google.accounts.id.renderButton(
+            document.getElementById("googleSignInButton"),
+            { 
+              theme: "outline", 
+              size: "large", 
+              text: "continue_with", 
+              width: 400 
+            }
+          );
+        }
+      };
+      document.head.appendChild(script);
+    }
+    
+    // Wait for page to load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadGoogleSignIn);
+    } else {
+      loadGoogleSignIn();
+    }
+  `
+}} />
+
+<div className="auth-divider">
+  <span>or continue with email</span>
+</div>
+
+{isLogin ? (
+  <form onSubmit={handleLogin} className="auth-form">
+    <div className="form-group">
+      <input
+        type="email"
+        placeholder="Email Address"
+        value={loginData.email}
+        onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+        required
+        disabled={actionLoading}
+      />
+              
               </div>
               <button type="submit" className="auth-btn" disabled={actionLoading}>
                 {actionLoading ? 'Creating Account...' : 'Create Account'}
