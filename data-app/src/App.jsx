@@ -1125,7 +1125,7 @@ function App() {
           </div>
 
           {/* Google Sign-in Button - UPDATED with proper Google button */}
-          {/* Google Sign-in Button - UPDATED with working Google button */}
+          {/* Google Sign-in Button - FIXED */}
 <div className="social-auth">
   <div id="googleSignInButton"></div>
 </div>
@@ -1133,46 +1133,46 @@ function App() {
 <script dangerouslySetInnerHTML={{
   __html: `
     function loadGoogleSignIn() {
+      // Check if already loaded
       if (window.google && document.getElementById('googleSignInButton').children.length > 0) {
         return;
       }
       
+      // Initialize Google Sign-in
+      google.accounts.id.initialize({
+        client_id: '359926094033-rl57709vq8llcjvgc45pdljt3srp3g9n.apps.googleusercontent.com',
+        callback: function(response) {
+          console.log('Google login success:', response);
+          // Handle login response here
+        },
+        auto_select: false
+      });
+      
+      // Render the button
+      google.accounts.id.renderButton(
+        document.getElementById("googleSignInButton"),
+        { 
+          theme: "outline", 
+          size: "large",
+          width: 400,
+          text: "continue_with"
+        }
+      );
+    }
+    
+    // Load Google script
+    if (!window.google) {
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
-      script.onload = function() {
-        if (window.google) {
-          google.accounts.id.initialize({
-            client_id: 'YOUR_ACTUAL_GOOGLE_CLIENT_ID', // REPLACE THIS
-            callback: function(response) {
-              console.log('Google login success:', response);
-              // Add your login handling code here
-            }
-          });
-          google.accounts.id.renderButton(
-            document.getElementById("googleSignInButton"),
-            { 
-              theme: "outline", 
-              size: "large", 
-              text: "continue_with", 
-              width: 400 
-            }
-          );
-        }
-      };
+      script.onload = loadGoogleSignIn;
       document.head.appendChild(script);
-    }
-    
-    // Wait for page to load
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', loadGoogleSignIn);
     } else {
       loadGoogleSignIn();
     }
   `
 }} />
-
 <div className="auth-divider">
   <span>or continue with email</span>
 </div>
