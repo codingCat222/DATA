@@ -100,6 +100,11 @@ function App() {
   }, []);
 
   const initializeGoogleSignIn = () => {
+    // Check if script is already loaded
+    if (window.google) {
+      return;
+    }
+
     // Load Google Sign-In script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
@@ -115,16 +120,18 @@ function App() {
         });
         
         // Render Google Sign-In button
-        window.google.accounts.id.renderButton(
-          document.getElementById('googleSignInButton'),
-          {
-            theme: 'outline',
-            size: 'large',
-            width: '100%',
-            text: 'continue_with',
-            shape: 'rectangular'
-          }
-        );
+        if (document.getElementById('googleSignInButton')) {
+          window.google.accounts.id.renderButton(
+            document.getElementById('googleSignInButton'),
+            {
+              theme: 'outline',
+              size: 'large',
+              width: '100%',
+              text: 'continue_with',
+              shape: 'rectangular'
+            }
+          );
+        }
       }
     };
     document.head.appendChild(script);
@@ -205,7 +212,7 @@ function App() {
     return () => clearInterval(interval);
   }, [otpTimer]);
 
-  // Network selection effect
+  // Network selection effect - FIXED: Fetch data plans from API
   useEffect(() => {
     if (selectedNetwork && isLoggedIn) {
       console.log('Fetching data plans for network:', selectedNetwork);
@@ -434,7 +441,7 @@ function App() {
     }
   };
 
-  // Enhanced Data Plans Fetching
+  // ENHANCED Data Plans Fetching - FIXED to use API properly
   const fetchDataPlans = async (networkCode) => {
     if (!networkCode) {
       console.log('No network code provided for data plans');
@@ -445,11 +452,9 @@ function App() {
     try {
       const token = localStorage.getItem('jaysub_token');
       
-      // Use fallback data immediately while API call is in progress
-      const fallbackPlans = getFallbackDataPlans(networkCode);
-      setDataPlans(fallbackPlans);
-
+      // First try to fetch from API
       if (token) {
+        console.log('Fetching data plans from API for network:', networkCode);
         const response = await fetch(API_URLS.dataPlans(networkCode), {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -459,14 +464,29 @@ function App() {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Data plans fetched for', networkCode, ':', data.plans);
+          console.log('Data plans fetched from API for', networkCode, ':', data);
+          
           if (data.plans && data.plans.length > 0) {
+            console.log('Using API data plans');
             setDataPlans(data.plans);
+            return;
           }
+        } else {
+          console.log('API fetch failed, status:', response.status);
         }
+      } else {
+        console.log('No token available for data plans fetch');
       }
+      
+      // If API fails, use fallback
+      console.log('Using fallback data plans for', networkCode);
+      const fallbackPlans = getFallbackDataPlans(networkCode);
+      setDataPlans(fallbackPlans);
+      
     } catch (error) {
-      console.error('Failed to fetch data plans, using fallback:', error);
+      console.error('Failed to fetch data plans from API, using fallback:', error);
+      const fallbackPlans = getFallbackDataPlans(networkCode);
+      setDataPlans(fallbackPlans);
     } finally {
       setActionLoading(false);
     }
@@ -616,64 +636,65 @@ function App() {
       setActionLoading(false);
     }
   };
-// Resend OTP - safer implementation
-const handleResendOtp = async () => {
-  if (!otpEmail) {
-    showNotification('No email to resend OTP to', 'error');
-    return;
-  }
 
-  setActionLoading(true);
-  try {
-    const response = await fetch(API_URLS.resendOtp, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email: otpEmail })
-    });
+  // Resend OTP - safer implementation
+  const handleResendOtp = async () => {
+    if (!otpEmail) {
+      showNotification('No email to resend OTP to', 'error');
+      return;
+    }
 
-    // Defensive JSON parse: only try to parse if response has JSON content-type
-    const contentType = response.headers.get('content-type') || '';
-    let data = null;
-    if (contentType.includes('application/json')) {
-      try {
-        data = await response.json();
-      } catch (parseErr) {
-        console.error('Failed to parse JSON from resendOtp response', parseErr);
-        showNotification('Failed to resend OTP (invalid server response)', 'error');
-        return;
+    setActionLoading(true);
+    try {
+      const response = await fetch(API_URLS.resendOtp, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: otpEmail })
+      });
+
+      // Defensive JSON parse: only try to parse if response has JSON content-type
+      const contentType = response.headers.get('content-type') || '';
+      let data = null;
+      if (contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (parseErr) {
+          console.error('Failed to parse JSON from resendOtp response', parseErr);
+          showNotification('Failed to resend OTP (invalid server response)', 'error');
+          return;
+        }
+      } else {
+        // fallback: if no JSON body but response.ok treat as success or read text for debugging
+        const text = await response.text();
+        console.warn('resendOtp returned non-json response:', text);
+        if (response.ok) {
+          setOtpTimer(300);
+          showNotification('New OTP sent to your email!', 'success');
+          return;
+        } else {
+          showNotification('Failed to resend OTP', 'error');
+          return;
+        }
       }
-    } else {
-      // fallback: if no JSON body but response.ok treat as success or read text for debugging
-      const text = await response.text();
-      console.warn('resendOtp returned non-json response:', text);
-      if (response.ok) {
+
+      if (response.ok && data && data.success) {
         setOtpTimer(300);
         showNotification('New OTP sent to your email!', 'success');
-        return;
       } else {
-        showNotification('Failed to resend OTP', 'error');
-        return;
+        console.error('Resend OTP failed:', data);
+        showNotification((data && data.message) || 'Failed to resend OTP', 'error');
       }
+    } catch (error) {
+      console.error('Failed to resend OTP:', error);
+      showNotification('Failed to resend OTP', 'error');
+    } finally {
+      setActionLoading(false);
     }
+  };
 
-    if (response.ok && data && data.success) {
-      setOtpTimer(300);
-      showNotification('New OTP sent to your email!', 'success');
-    } else {
-      console.error('Resend OTP failed:', data);
-      showNotification((data && data.message) || 'Failed to resend OTP', 'error');
-    }
-  } catch (error) {
-    console.error('Failed to resend OTP:', error);
-    showNotification('Failed to resend OTP', 'error');
-  } finally {
-    setActionLoading(false);
-  }
-};
-
-  // Handle login
+  // Handle login - FIXED: Added missing password field
   const handleLogin = async (e) => {
     e.preventDefault();
     setActionLoading(true);
@@ -1124,7 +1145,7 @@ const handleResendOtp = async () => {
     );
   }
 
-  // Login/Signup Form
+  // Login/Signup Form - FIXED: Added missing password field and complete form
   if (!isLoggedIn) {
     return (
       <div className="auth-container">
@@ -1151,72 +1172,92 @@ const handleResendOtp = async () => {
             </button>
           </div>
 
-          {/* Google Sign-in Button - UPDATED with proper Google button */}
-          {/* Google Sign-in Button - FIXED */}
-<div className="social-auth">
-  <div id="googleSignInButton"></div>
-</div>
+          {/* Google Sign-in Button */}
+          <div className="social-auth">
+            <div id="googleSignInButton"></div>
+          </div>
+          
+          <div className="auth-divider">
+            <span>or continue with email</span>
+          </div>
 
-<script dangerouslySetInnerHTML={{
-  __html: `
-    function loadGoogleSignIn() {
-      // Check if already loaded
-      if (window.google && document.getElementById('googleSignInButton').children.length > 0) {
-        return;
-      }
-      
-      // Initialize Google Sign-in
-      google.accounts.id.initialize({
-        client_id: '359926094033-rl57709vq8llcjvgc45pdljt3srp3g9n.apps.googleusercontent.com',
-        callback: function(response) {
-          console.log('Google login success:', response);
-          // Handle login response here
-        },
-        auto_select: false
-      });
-      
-      // Render the button
-      google.accounts.id.renderButton(
-        document.getElementById("googleSignInButton"),
-        { 
-          theme: "outline", 
-          size: "large",
-          width: 400,
-          text: "continue_with"
-        }
-      );
-    }
-    
-    // Load Google script
-    if (!window.google) {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      script.onload = loadGoogleSignIn;
-      document.head.appendChild(script);
-    } else {
-      loadGoogleSignIn();
-    }
-  `
-}} />
- </div>         
-<div className="auth-divider">
-  <span>or continue with email</span>
-</div>
-
-{isLogin ? (
-  <form onSubmit={handleLogin} className="auth-form">
-    <div className="form-group">
-      <input
-        type="email"
-        placeholder="Email Address"
-        value={loginData.email}
-        onChange={(e) => setLoginData({...loginData, email: e.target.value})}
-        required
-        disabled={actionLoading}
-      />
-              
+          {isLogin ? (
+            <form onSubmit={handleLogin} className="auth-form">
+              <div className="form-group">
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  value={loginData.email}
+                  onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={loginData.password}
+                  onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <button type="submit" className="auth-btn" disabled={actionLoading}>
+                {actionLoading ? 'Logging in...' : 'Login'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSignup} className="auth-form">
+              <div className="form-group">
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={signupData.name}
+                  onChange={(e) => setSignupData({...signupData, name: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  value={signupData.email}
+                  onChange={(e) => setSignupData({...signupData, email: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={signupData.phone}
+                  onChange={(e) => setSignupData({...signupData, phone: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={signupData.password}
+                  onChange={(e) => setSignupData({...signupData, password: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="password"
+                  placeholder="Confirm Password"
+                  value={signupData.confirmPassword}
+                  onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})}
+                  required
+                  disabled={actionLoading}
+                />
               </div>
               <button type="submit" className="auth-btn" disabled={actionLoading}>
                 {actionLoading ? 'Creating Account...' : 'Create Account'}
@@ -1228,8 +1269,6 @@ const handleResendOtp = async () => {
     );
   }
 
-  // Main App after login - REST OF THE CODE REMAINS THE SAME...
-  // [The rest of your main app code remains unchanged...]
   // Main App after login
   return (
     <div className={`app ${darkMode ? 'dark' : ''}`}>
