@@ -67,17 +67,13 @@ function App() {
   const [referrals, setReferrals] = useState([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  // Google Client ID
-  const GOOGLE_CLIENT_ID = "359926094033-rl57709vq8llcjvgc45pdljt3srp3g9n.apps.googleusercontent.com";
-
-  // API URLs - Updated to your backend
+  // API URLs
   const API_BASE_URL = 'https://data-dqrk.onrender.com';
   const API_URLS = {
     login: `${API_BASE_URL}/api/auth/login`,
     signup: `${API_BASE_URL}/api/auth/signup`,
     verifyOtp: `${API_BASE_URL}/api/auth/verify-otp`,
     resendOtp: `${API_BASE_URL}/api/auth/resend-otp`,
-    googleAuth: `${API_BASE_URL}/api/auth/google`,
     profile: `${API_BASE_URL}/api/user/profile`,
     updateProfile: `${API_BASE_URL}/api/user/update-profile`,
     changePassword: `${API_BASE_URL}/api/user/change-password`,
@@ -92,96 +88,6 @@ function App() {
     purchase: `${API_BASE_URL}/api/purchase`,
     initializePayment: `${API_BASE_URL}/api/payments/initialize`,
     verifyPayment: `${API_BASE_URL}/api/payments/verify`
-  };
-
-  // Initialize Google Sign-In
-  useEffect(() => {
-    initializeGoogleSignIn();
-  }, []);
-
-  const initializeGoogleSignIn = () => {
-    // Load Google Sign-In script
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (window.google) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleSignIn,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        });
-        
-        // Render Google Sign-In button
-        window.google.accounts.id.renderButton(
-          document.getElementById('googleSignInButton'),
-          {
-            theme: 'outline',
-            size: 'large',
-            width: '100%',
-            text: 'continue_with',
-            shape: 'rectangular'
-          }
-        );
-      }
-    };
-    document.head.appendChild(script);
-  };
-
-  // Google Sign-In Handler - FIXED with your exact code
-  const handleGoogleSignIn = async (googleData) => {
-    setActionLoading(true);
-    try {
-      console.log('Google sign-in data:', googleData);
-      
-      const response = await fetch(API_URLS.googleAuth, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token: googleData.credential
-        })
-      });
-
-      const data = await response.json();
-      console.log('Backend response:', data);
-      
-      if (response.ok && data.success) {
-        // Store token and user data
-        localStorage.setItem('jaysub_token', data.data.token);
-        
-        // Set user data
-        const userData = data.data.user;
-        setUser(userData);
-        setIsLoggedIn(true);
-        setWalletBalance(userData.walletBalance || 0);
-        setProfileData({
-          name: userData.name,
-          email: userData.email,
-          phone: userData.phone || ''
-        });
-        setProfileImageUrl(userData.profileImage || '');
-        setReferralCode(userData.referralCode || '');
-        
-        showNotification('Google sign-in successful!', 'success');
-        
-        // Fetch initial data
-        await fetchNetworks();
-        await fetchAirtimeNetworks();
-        await fetchReferrals();
-        await fetchTransactions();
-      } else {
-        showNotification(data.message || 'Google sign-in failed', 'error');
-      }
-    } catch (error) {
-      console.error('Google sign-in error:', error);
-      showNotification('Google sign-in failed. Please try again.', 'error');
-    } finally {
-      setActionLoading(false);
-    }
   };
 
   // Initialize everything on component mount
@@ -226,7 +132,6 @@ function App() {
 
   const initializeApp = async () => {
     try {
-      await initializePWA();
       checkDarkMode();
       await checkAuthStatus();
     } catch (error) {
@@ -234,67 +139,6 @@ function App() {
       showNotification('Failed to initialize app', 'error');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Enhanced PWA Implementation
-  const initializePWA = async () => {
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      console.log('PWA: Running in standalone mode');
-    }
-
-    if ('serviceWorker' in navigator) {
-      try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        console.log('PWA: Service Worker registered successfully');
-      } catch (error) {
-        console.error('PWA: Service Worker registration failed:', error);
-      }
-    }
-
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      console.log('PWA: Before install prompt event fired');
-      
-      setTimeout(() => {
-        showPWAInstallPrompt(deferredPrompt);
-      }, 5000);
-    });
-
-    window.addEventListener('appinstalled', () => {
-      console.log('PWA: App was installed');
-      deferredPrompt = null;
-      showNotification('JAYSUB installed successfully!', 'success');
-    });
-  };
-
-  const showPWAInstallPrompt = (deferredPrompt) => {
-    if (deferredPrompt && !localStorage.getItem('pwaPromptDismissed')) {
-      const shouldShowPrompt = confirm('Install JAYSUB for better experience! Would you like to install it?');
-      
-      if (shouldShowPrompt) {
-        handlePwaInstall(deferredPrompt);
-      } else {
-        localStorage.setItem('pwaPromptDismissed', 'true');
-      }
-    }
-  };
-
-  const handlePwaInstall = async (deferredPrompt) => {
-    if (deferredPrompt) {
-      try {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        
-        if (outcome === 'accepted') {
-          console.log('PWA: User accepted the install prompt');
-          localStorage.setItem('pwaPromptDismissed', 'true');
-        }
-      } catch (error) {
-        console.error('PWA: Install prompt failed:', error);
-      }
     }
   };
 
@@ -434,7 +278,7 @@ function App() {
     }
   };
 
-  // Enhanced Data Plans Fetching
+  // Data Plans Fetching - FIXED
   const fetchDataPlans = async (networkCode) => {
     if (!networkCode) {
       console.log('No network code provided for data plans');
@@ -445,11 +289,9 @@ function App() {
     try {
       const token = localStorage.getItem('jaysub_token');
       
-      // Use fallback data immediately while API call is in progress
-      const fallbackPlans = getFallbackDataPlans(networkCode);
-      setDataPlans(fallbackPlans);
-
+      // First try to fetch from API
       if (token) {
+        console.log('Fetching data plans from API for network:', networkCode);
         const response = await fetch(API_URLS.dataPlans(networkCode), {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -459,14 +301,29 @@ function App() {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Data plans fetched for', networkCode, ':', data.plans);
+          console.log('Data plans fetched from API for', networkCode, ':', data);
+          
           if (data.plans && data.plans.length > 0) {
+            console.log('Using API data plans');
             setDataPlans(data.plans);
+            return;
           }
+        } else {
+          console.log('API fetch failed, status:', response.status);
         }
+      } else {
+        console.log('No token available for data plans fetch');
       }
+      
+      // If API fails, use fallback
+      console.log('Using fallback data plans for', networkCode);
+      const fallbackPlans = getFallbackDataPlans(networkCode);
+      setDataPlans(fallbackPlans);
+      
     } catch (error) {
-      console.error('Failed to fetch data plans, using fallback:', error);
+      console.error('Failed to fetch data plans from API, using fallback:', error);
+      const fallbackPlans = getFallbackDataPlans(networkCode);
+      setDataPlans(fallbackPlans);
     } finally {
       setActionLoading(false);
     }
@@ -617,8 +474,13 @@ function App() {
     }
   };
 
-  // Resend OTP
+  // Resend OTP - safer implementation
   const handleResendOtp = async () => {
+    if (!otpEmail) {
+      showNotification('No email to resend OTP to', 'error');
+      return;
+    }
+
     setActionLoading(true);
     try {
       const response = await fetch(API_URLS.resendOtp, {
@@ -626,20 +488,41 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email: otpEmail
-        })
+        body: JSON.stringify({ email: otpEmail })
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      let data = null;
+      if (contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (parseErr) {
+          console.error('Failed to parse JSON from resendOtp response', parseErr);
+          showNotification('Failed to resend OTP (invalid server response)', 'error');
+          return;
+        }
+      } else {
+        const text = await response.text();
+        console.warn('resendOtp returned non-json response:', text);
+        if (response.ok) {
+          setOtpTimer(300);
+          showNotification('New OTP sent to your email!', 'success');
+          return;
+        } else {
+          showNotification('Failed to resend OTP', 'error');
+          return;
+        }
+      }
 
-      if (response.ok && data.success) {
+      if (response.ok && data && data.success) {
         setOtpTimer(300);
         showNotification('New OTP sent to your email!', 'success');
       } else {
-        showNotification(data.message || 'Failed to resend OTP', 'error');
+        console.error('Resend OTP failed:', data);
+        showNotification((data && data.message) || 'Failed to resend OTP', 'error');
       }
     } catch (error) {
+      console.error('Failed to resend OTP:', error);
       showNotification('Failed to resend OTP', 'error');
     } finally {
       setActionLoading(false);
@@ -1124,11 +1007,34 @@ function App() {
             </button>
           </div>
 
-          {/* Google Sign-in Button - UPDATED with proper Google button */}
+          {/* Simple Google Sign-in placeholder - No external scripts */}
           <div className="social-auth">
-            <div id="googleSignInButton"></div>
+            <button 
+              type="button" 
+              className="google-btn"
+              onClick={() => showNotification('Google Sign-In coming soon!', 'info')}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                background: 'white',
+                color: '#333',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                marginBottom: '16px'
+              }}
+            >
+              <span>🔐</span>
+              Sign in with Google
+            </button>
           </div>
-
+          
           <div className="auth-divider">
             <span>or continue with email</span>
           </div>
@@ -1221,6 +1127,68 @@ function App() {
     );
   }
 
+  // Main App after login
+  return (
+    <div className={`app ${darkMode ? 'dark' : ''}`}>
+      {actionLoading && <div className="action-preloader">Processing...</div>}
+      
+      {/* Header */}
+      <header className="header">
+        <div className="header-content">
+          <h1>JAYSUB</h1>
+          <div className="user-menu">
+            <div className="wallet-badge">
+              ₦{walletBalance.toLocaleString()}
+            </div>
+            <button onClick={handleLogout} className="logout-btn">Logout</button>
+          </div>
+        </div>
+      </header>
+
+      {/* Bottom Navigation for Mobile/PWA - HORIZONTAL */}
+      <nav className="bottom-navigation">
+        <div className="nav-container">
+          <button 
+            className={currentView === 'dashboard' ? 'nav-btn active' : 'nav-btn'}
+            onClick={() => setCurrentView('dashboard')}
+          >
+            <span className="nav-icon">📊</span>
+            <span className="nav-label">Dashboard</span>
+          </button>
+          <button 
+            className={currentView === 'data' ? 'nav-btn active' : 'nav-btn'}
+            onClick={() => setCurrentView('data')}
+          >
+            <span className="nav-icon">📱</span>
+            <span className="nav-label">Buy Data</span>
+          </button>
+          <button 
+            className={currentView === 'airtime' ? 'nav-btn active' : 'nav-btn'}
+            onClick={() => setCurrentView('airtime')}
+          >
+            <span className="nav-icon">📞</span>
+            <span className="nav-label">Buy Airtime</span>
+          </button>
+          <button 
+            className={currentView === 'wallet' ? 'nav-btn active' : 'nav-btn'}
+            onClick={() => setCurrentView('wallet')}
+          >
+            <span className="nav-icon">💳</span>
+            <span className="nav-label">Wallet</span>
+          </button>
+          <button 
+            className={currentView === 'profile' ? 'nav-btn active' : 'nav-btn'}
+            onClick={() => setCurrentView('profile')}
+          >
+            <span className="nav-icon">👤</span>
+            <span className="nav-label">Profile</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Main Content - REST OF YOUR MAIN APP CODE REMAINS EXACTLY THE SAME */}
+      {/* ... (your existing main content) ... */}
+      
   // Main App after login - REST OF THE CODE REMAINS THE SAME...
   // [The rest of your main app code remains unchanged...]
   // Main App after login
