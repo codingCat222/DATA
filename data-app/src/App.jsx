@@ -1153,7 +1153,6 @@ function App() {
     document.head.appendChild(script);
   `
 }} />
-
 <div className="auth-divider">
   <span>or continue with email</span>
 </div>
