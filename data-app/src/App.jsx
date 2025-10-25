@@ -1173,6 +1173,7 @@ function App() {
     }
   `
 }} />
+ </div>         
 <div className="auth-divider">
   <span>or continue with email</span>
 </div>
