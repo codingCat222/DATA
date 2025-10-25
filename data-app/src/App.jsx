@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -68,6 +68,8 @@ function App() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [googleScriptLoaded, setGoogleScriptLoaded] = useState(false);
 
+  const googleButtonRef = useRef(null);
+
   // Google Client ID
   const GOOGLE_CLIENT_ID = "359926094033-rl57709vq8llcjvgc45pdljt3srp3g9n.apps.googleusercontent.com";
 
@@ -95,27 +97,31 @@ function App() {
     verifyPayment: `${API_BASE_URL}/api/payments/verify`
   };
 
-  // Initialize Google Sign-In - SIMPLIFIED VERSION
+  // SIMPLIFIED Google Sign-In - FIXED VERSION
   useEffect(() => {
-    const initializeGoogleSignIn = () => {
-      // Check if script is already loaded
-      const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-      
-      if (existingScript) {
-        // Script already exists, just initialize
-        if (window.google) {
-          window.google.accounts.id.initialize({
-            client_id: GOOGLE_CLIENT_ID,
-            callback: handleGoogleSignIn,
-            auto_select: false,
-            cancel_on_tap_outside: true,
-          });
-          renderGoogleButton();
-        }
+    // Only initialize if not logged in
+    if (isLoggedIn) return;
+
+    const loadGoogleScript = () => {
+      // Check if already initialized
+      if (window.google) {
+        renderGoogleButton();
         return;
       }
 
-      // Load Google Sign-In script
+      // Check if script already exists
+      if (document.querySelector('script[src*="accounts.google.com"]')) {
+        // Script is loading, wait for it
+        const checkGoogle = setInterval(() => {
+          if (window.google) {
+            clearInterval(checkGoogle);
+            renderGoogleButton();
+          }
+        }, 100);
+        return;
+      }
+
+      // Load the Google script
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
@@ -136,54 +142,33 @@ function App() {
     };
 
     const renderGoogleButton = () => {
-      if (window.google && document.getElementById('googleSignInButton')) {
-        try {
-          window.google.accounts.id.renderButton(
-            document.getElementById('googleSignInButton'),
-            {
-              theme: 'outline',
-              size: 'large',
-              width: '100%',
-              text: 'continue_with',
-              shape: 'rectangular'
-            }
-          );
-        } catch (error) {
-          console.error('Error rendering Google button:', error);
+      if (!window.google || !googleButtonRef.current) return;
+      
+      try {
+        // Clear any existing button
+        if (googleButtonRef.current) {
+          googleButtonRef.current.innerHTML = '';
         }
+        
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: 'outline',
+          size: 'large',
+          width: '100%',
+          text: 'continue_with',
+          shape: 'rectangular'
+        });
+      } catch (error) {
+        console.error('Error rendering Google button:', error);
       }
     };
 
-    // Initialize when component mounts
-    initializeGoogleSignIn();
-  }, []);
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      loadGoogleScript();
+    }, 500);
 
-  // Re-render Google button when auth state changes or script loads
-  useEffect(() => {
-    if ((!isLoggedIn && googleScriptLoaded) || (!isLoggedIn && window.google)) {
-      const renderButton = () => {
-        if (window.google && document.getElementById('googleSignInButton')) {
-          try {
-            window.google.accounts.id.renderButton(
-              document.getElementById('googleSignInButton'),
-              {
-                theme: 'outline',
-                size: 'large',
-                width: '100%',
-                text: 'continue_with',
-                shape: 'rectangular'
-              }
-            );
-          } catch (error) {
-            console.error('Error rendering Google button:', error);
-          }
-        }
-      };
-
-      // Small delay to ensure DOM is ready
-      setTimeout(renderButton, 100);
-    }
-  }, [isLoggedIn, googleScriptLoaded]);
+    return () => clearTimeout(timer);
+  }, [isLoggedIn]);
 
   // Google Sign-In Handler
   const handleGoogleSignIn = async (googleData) => {
@@ -292,65 +277,22 @@ function App() {
     }
   };
 
-  // Enhanced PWA Implementation
+  // SIMPLIFIED PWA Implementation to avoid errors
   const initializePWA = async () => {
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      console.log('PWA: Running in standalone mode');
-    }
-
+    // Only register service worker if it doesn't exist to avoid conflicts
     if ('serviceWorker' in navigator) {
       try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        console.log('PWA: Service Worker registered successfully');
-      } catch (error) {
-        console.error('PWA: Service Worker registration failed:', error);
-      }
-    }
-
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      console.log('PWA: Before install prompt event fired');
-      
-      setTimeout(() => {
-        showPWAInstallPrompt(deferredPrompt);
-      }, 5000);
-    });
-
-    window.addEventListener('appinstalled', () => {
-      console.log('PWA: App was installed');
-      deferredPrompt = null;
-      showNotification('JAYSUB installed successfully!', 'success');
-    });
-  };
-
-  const showPWAInstallPrompt = (deferredPrompt) => {
-    if (deferredPrompt && !localStorage.getItem('pwaPromptDismissed')) {
-      const shouldShowPrompt = confirm('Install JAYSUB for better experience! Would you like to install it?');
-      
-      if (shouldShowPrompt) {
-        handlePwaInstall(deferredPrompt);
-      } else {
-        localStorage.setItem('pwaPromptDismissed', 'true');
-      }
-    }
-  };
-
-  const handlePwaInstall = async (deferredPrompt) => {
-    if (deferredPrompt) {
-      try {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        
-        if (outcome === 'accepted') {
-          console.log('PWA: User accepted the install prompt');
-          localStorage.setItem('pwaPromptDismissed', 'true');
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (registrations.length === 0) {
+          await navigator.serviceWorker.register('/sw.js');
+          console.log('PWA: Service Worker registered successfully');
         }
       } catch (error) {
-        console.error('PWA: Install prompt failed:', error);
+        console.log('PWA: Service Worker already registered or failed');
       }
     }
+
+    // Skip the install prompt for now to avoid conflicts
   };
 
   const checkDarkMode = () => {
@@ -1220,26 +1162,32 @@ function App() {
             </button>
           </div>
 
-          {/* Google Sign-in Button - FIXED */}
+          {/* Google Sign-in Button - FIXED with proper ref */}
           <div className="social-auth">
-            <div id="googleSignInButton" style={{ minHeight: '44px', display: 'flex', justifyContent: 'center' }}>
-              {/* Fallback button in case Google script doesn't load */}
+            <div 
+              ref={googleButtonRef}
+              style={{ 
+                minHeight: '44px', 
+                display: 'flex', 
+                justifyContent: 'center',
+                marginBottom: '16px'
+              }}
+            >
               {!window.google && (
-                <button 
-                  type="button" 
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    background: 'white',
-                    color: '#333',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => showNotification('Google Sign-In loading...', 'info')}
-                >
-                  Sign in with Google
-                </button>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '44px',
+                  background: '#f8f9fa',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  color: '#666',
+                  fontSize: '14px'
+                }}>
+                  Loading Google Sign-In...
+                </div>
               )}
             </div>
           </div>
