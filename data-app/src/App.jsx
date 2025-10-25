@@ -278,7 +278,7 @@ function App() {
     }
   };
 
-  // Data Plans Fetching - FIXED
+  // Data Plans Fetching
   const fetchDataPlans = async (networkCode) => {
     if (!networkCode) {
       console.log('No network code provided for data plans');
@@ -1007,7 +1007,7 @@ function App() {
             </button>
           </div>
 
-          {/* Simple Google Sign-in placeholder - No external scripts */}
+          {/* Simple Google Sign-in placeholder */}
           <div className="social-auth">
             <button 
               type="button" 
@@ -1118,7 +1118,7 @@ function App() {
                 />
               </div>
               <button type="submit" className="auth-btn" disabled={actionLoading}>
-                {actionLoading ? 'Creating Account...' : 'Create Account'}
+                {actionLoading ? 'Creating Account...' : 'Sign Up'}
               </button>
             </form>
           )}
@@ -1127,630 +1127,580 @@ function App() {
     );
   }
 
-  // Main App after login
+  // Main Dashboard Layout
   return (
-    <div className={`app ${darkMode ? 'dark' : ''}`}>
-      {actionLoading && <div className="action-preloader">Processing...</div>}
-      
+    <div className={`app-container ${darkMode ? 'dark-mode' : ''}`}>
       {/* Header */}
-      <header className="header">
+      <header className="app-header">
         <div className="header-content">
-          <h1>JAYSUB</h1>
-          <div className="user-menu">
-            <div className="wallet-badge">
-              ₦{walletBalance.toLocaleString()}
-            </div>
-            <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <div className="logo-section">
+            <h1>JAYSUB</h1>
+            <span className="greeting">{greeting}, {user?.name}</span>
           </div>
-        </div>
-      </header>
-
-      {/* Bottom Navigation for Mobile/PWA - HORIZONTAL */}
-      <nav className="bottom-navigation">
-        <div className="nav-container">
-          <button 
-            className={currentView === 'dashboard' ? 'nav-btn active' : 'nav-btn'}
-            onClick={() => setCurrentView('dashboard')}
-          >
-            <span className="nav-icon">📊</span>
-            <span className="nav-label">Dashboard</span>
-          </button>
-          <button 
-            className={currentView === 'data' ? 'nav-btn active' : 'nav-btn'}
-            onClick={() => setCurrentView('data')}
-          >
-            <span className="nav-icon">📱</span>
-            <span className="nav-label">Buy Data</span>
-          </button>
-          <button 
-            className={currentView === 'airtime' ? 'nav-btn active' : 'nav-btn'}
-            onClick={() => setCurrentView('airtime')}
-          >
-            <span className="nav-icon">📞</span>
-            <span className="nav-label">Buy Airtime</span>
-          </button>
-          <button 
-            className={currentView === 'wallet' ? 'nav-btn active' : 'nav-btn'}
-            onClick={() => setCurrentView('wallet')}
-          >
-            <span className="nav-icon">💳</span>
-            <span className="nav-label">Wallet</span>
-          </button>
-          <button 
-            className={currentView === 'profile' ? 'nav-btn active' : 'nav-btn'}
-            onClick={() => setCurrentView('profile')}
-          >
-            <span className="nav-icon">👤</span>
-            <span className="nav-label">Profile</span>
-          </button>
-        </div>
-      </nav>
-
-      {/* Main Content - REST OF YOUR MAIN APP CODE REMAINS EXACTLY THE SAME */}
-      {/* ... (your existing main content) ... */}
-      
-  // Main App after login - REST OF THE CODE REMAINS THE SAME...
-  // [The rest of your main app code remains unchanged...]
-  // Main App after login
-  return (
-    <div className={`app ${darkMode ? 'dark' : ''}`}>
-      {actionLoading && <div className="action-preloader">Processing...</div>}
-      
-      {/* Header */}
-      <header className="header">
-        <div className="header-content">
-          <h1>JAYSUB</h1>
-          <div className="user-menu">
-            <span>{greeting}, {user?.name}</span>
-            <div className="wallet-badge">
-              ₦{walletBalance.toLocaleString()}
-            </div>
-            <button onClick={handleLogout} className="logout-btn">Logout</button>
-          </div>
-        </div>
-      </header>
-
-      {/* Bottom Navigation for Mobile/PWA - HORIZONTAL */}
-      <nav className="bottom-navigation">
-        <div className="nav-container">
-          <button 
-            className={currentView === 'dashboard' ? 'nav-btn active' : 'nav-btn'}
-            onClick={() => setCurrentView('dashboard')}
-          >
-            <span className="nav-icon">📊</span>
-            <span className="nav-label">Dashboard</span>
-          </button>
-          <button 
-            className={currentView === 'data' ? 'nav-btn active' : 'nav-btn'}
-            onClick={() => setCurrentView('data')}
-          >
-            <span className="nav-icon">📱</span>
-            <span className="nav-label">Buy Data</span>
-          </button>
-          <button 
-            className={currentView === 'airtime' ? 'nav-btn active' : 'nav-btn'}
-            onClick={() => setCurrentView('airtime')}
-          >
-            <span className="nav-icon">📞</span>
-            <span className="nav-label">Buy Airtime</span>
-          </button>
-          <button 
-            className={currentView === 'wallet' ? 'nav-btn active' : 'nav-btn'}
-            onClick={() => setCurrentView('wallet')}
-          >
-            <span className="nav-icon">💳</span>
-            <span className="nav-label">Wallet</span>
-          </button>
-          <button 
-            className={currentView === 'profile' ? 'nav-btn active' : 'nav-btn'}
-            onClick={() => setCurrentView('profile')}
-          >
-            <span className="nav-icon">👤</span>
-            <span className="nav-label">Profile</span>
-          </button>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="main">
-        {currentView === 'dashboard' && (
-          <div className="dashboard">
-            <div className="welcome-section">
-              <h2>{greeting}, {user?.name}! 👋</h2>
-              <p>What would you like to do today?</p>
-            </div>
-
-            <div className="balance-card">
-              <div className="balance-info">
-                <h3>Wallet Balance</h3>
-                <h2>₦{walletBalance.toLocaleString()}</h2>
-              </div>
-              <button 
-                onClick={() => setShowFundModal(true)}
-                className="fund-btn"
-              >
-                Fund Wallet
-              </button>
-            </div>
-
-            <div className="quick-actions">
-              <h3>Quick Services</h3>
-              <div className="actions-grid">
-                <div className="action-card" onClick={() => setCurrentView('data')}>
-                  <div className="action-icon">📱</div>
-                  <span>Buy Data</span>
-                  <p>Instant delivery</p>
-                </div>
-                <div className="action-card" onClick={() => setCurrentView('airtime')}>
-                  <div className="action-icon">📞</div>
-                  <span>Buy Airtime</span>
-                  <p>Any network</p>
-                </div>
-                <div className="action-card" onClick={() => setShowFundModal(true)}>
-                  <div className="action-icon">💳</div>
-                  <span>Fund Wallet</span>
-                  <p>Add funds</p>
-                </div>
-                <div className="action-card" onClick={() => setCurrentView('profile')}>
-                  <div className="action-icon">👥</div>
-                  <span>Refer & Earn</span>
-                  <p>Get ₦200 bonus</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="recent-transactions">
-              <div className="section-header">
-                <h3>Recent Transactions</h3>
-                {transactions.length > 0 && (
-                  <button onClick={() => setCurrentView('wallet')}>View All</button>
+          
+          <div className="header-actions">
+            <button 
+              className="theme-toggle"
+              onClick={toggleDarkMode}
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+            
+            <div className="user-menu">
+              <div className="user-avatar">
+                {profileImageUrl ? (
+                  <img src={profileImageUrl} alt="Profile" />
+                ) : (
+                  <span>{user?.name?.charAt(0)?.toUpperCase() || 'U'}</span>
                 )}
               </div>
-              {transactions.length === 0 ? (
-                <div className="empty-state">
-                  <p>No transactions yet</p>
-                  <small>Your transactions will appear here</small>
-                </div>
-              ) : (
-                transactions.slice(0, 5).map(transaction => (
-                  <div key={transaction.id} className="transaction-item">
-                    <div className="transaction-info">
-                      <p className="transaction-desc">{transaction.description}</p>
-                      <p className="transaction-date">{transaction.date}</p>
-                    </div>
-                    <p className={`transaction-amount ${transaction.type}`}>
-                      {transaction.type === 'debit' ? '-' : '+'}₦{transaction.amount}
-                    </p>
-                  </div>
-                ))
-              )}
+              <span className="user-name">{user?.name}</span>
             </div>
+            
+            <button className="logout-btn" onClick={handleLogout}>
+              Logout
+            </button>
           </div>
-        )}
+        </div>
+      </header>
 
-        {currentView === 'data' && (
-          <div className="service-page">
-            <h2>Buy Data</h2>
-            
-            {actionLoading && <div className="loading-text">Loading data plans...</div>}
-            
-            <div className="service-form">
-              {/* Network Selection - FIXED with immediate fallback */}
-              <div className="form-group">
-                <label>Select Network Provider</label>
-                <select 
-                  value={selectedNetwork} 
-                  onChange={(e) => {
-                    console.log('Network changed to:', e.target.value);
-                    setSelectedNetwork(e.target.value);
-                    setSelectedPlan(''); // Reset selected plan when network changes
-                  }}
-                  disabled={actionLoading}
-                  className="network-select"
-                >
-                  {networks.map(network => (
-                    <option key={network.code} value={network.code}>
-                      {network.name}
-                    </option>
-                  ))}
-                </select>
+      {/* Main Content */}
+      <div className="main-content">
+        {/* Sidebar */}
+        <nav className="sidebar">
+          <ul className="nav-menu">
+            <li>
+              <button 
+                className={currentView === 'dashboard' ? 'active' : ''}
+                onClick={() => setCurrentView('dashboard')}
+              >
+                📊 Dashboard
+              </button>
+            </li>
+            <li>
+              <button 
+                className={currentView === 'data' ? 'active' : ''}
+                onClick={() => setCurrentView('data')}
+              >
+                📱 Buy Data
+              </button>
+            </li>
+            <li>
+              <button 
+                className={currentView === 'airtime' ? 'active' : ''}
+                onClick={() => setCurrentView('airtime')}
+              >
+                📞 Buy Airtime
+              </button>
+            </li>
+            <li>
+              <button 
+                className={currentView === 'transactions' ? 'active' : ''}
+                onClick={() => setCurrentView('transactions')}
+              >
+                💳 Transactions
+              </button>
+            </li>
+            <li>
+              <button 
+                className={currentView === 'profile' ? 'active' : ''}
+                onClick={() => setCurrentView('profile')}
+              >
+                👤 Profile
+              </button>
+            </li>
+            <li>
+              <button 
+                className={currentView === 'referrals' ? 'active' : ''}
+                onClick={() => setCurrentView('referrals')}
+              >
+                👥 Referrals
+              </button>
+            </li>
+          </ul>
+        </nav>
+
+        {/* Content Area */}
+        <div className="content-area">
+          {actionLoading && (
+            <div className="action-preloader">
+              <div className="spinner"></div>
+              <span>Processing...</span>
+            </div>
+          )}
+
+          {/* Dashboard View */}
+          {currentView === 'dashboard' && (
+            <div className="dashboard-view">
+              <div className="wallet-card">
+                <h3>Wallet Balance</h3>
+                <div className="balance">₦{walletBalance.toLocaleString()}</div>
+                <div className="wallet-actions">
+                  <button 
+                    className="fund-btn"
+                    onClick={() => setShowFundModal(true)}
+                  >
+                    Fund Wallet
+                  </button>
+                  <button 
+                    className="refresh-btn"
+                    onClick={checkAuthStatus}
+                  >
+                    Refresh
+                  </button>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>Phone Number</label>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="08012345678"
-                  disabled={actionLoading}
-                />
+              <div className="quick-actions">
+                <h3>Quick Actions</h3>
+                <div className="action-grid">
+                  <button 
+                    className="action-btn"
+                    onClick={() => setCurrentView('data')}
+                  >
+                    <span>📱</span>
+                    Buy Data
+                  </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => setCurrentView('airtime')}
+                  >
+                    <span>📞</span>
+                    Buy Airtime
+                  </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => setCurrentView('transactions')}
+                  >
+                    <span>💳</span>
+                    Transactions
+                  </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => setCurrentView('referrals')}
+                  >
+                    <span>👥</span>
+                    Referrals
+                  </button>
+                </div>
               </div>
 
-              <div className="plans-grid">
-                <label>Select Data Plan</label>
-                {dataPlans.length > 0 ? (
-                  <div className="plans-container">
-                    {dataPlans.map(plan => (
-                      <div 
-                        key={plan.id}
-                        className={`plan-card ${selectedPlan === plan.id ? 'selected' : ''}`}
-                        onClick={() => !actionLoading && setSelectedPlan(plan.id)}
-                      >
-                        <div className="plan-info">
-                          <h4>{plan.name}</h4>
-                          <p className="plan-price">₦{plan.price}</p>
-                          {plan.validity && <small className="plan-validity">{plan.validity}</small>}
+              {/* Recent Transactions Preview */}
+              <div className="recent-transactions">
+                <h3>Recent Transactions</h3>
+                {transactions.length > 0 ? (
+                  <div className="transactions-list">
+                    {transactions.slice(0, 5).map(transaction => (
+                      <div key={transaction.id} className="transaction-item">
+                        <div className="transaction-info">
+                          <span className="description">{transaction.description}</span>
+                          <span className="date">{transaction.date}</span>
                         </div>
-                        {selectedPlan === plan.id && (
-                          <button 
-                            className="buy-now-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePurchase('data', plan.price, plan.name);
-                            }}
-                            disabled={!phoneNumber || actionLoading}
-                          >
-                            {actionLoading ? 'Processing...' : 'Buy Now'}
-                          </button>
-                        )}
+                        <div className={`amount ${transaction.type}`}>
+                          {transaction.type === 'debit' ? '-' : '+'}₦{transaction.amount}
+                        </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="empty-state">
-                    <p>No data plans available</p>
-                    <small>Please select a network to see available plans</small>
+                  <p>No transactions yet</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Data Purchase View */}
+          {currentView === 'data' && (
+            <div className="data-view">
+              <h2>Buy Data</h2>
+              <div className="purchase-form">
+                <div className="form-group">
+                  <label>Select Network</label>
+                  <select 
+                    value={selectedNetwork} 
+                    onChange={(e) => setSelectedNetwork(e.target.value)}
+                    disabled={actionLoading}
+                  >
+                    {networks.map(network => (
+                      <option key={network.code} value={network.code}>
+                        {network.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input
+                    type="tel"
+                    placeholder="Enter phone number"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    disabled={actionLoading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Select Data Plan</label>
+                  {actionLoading ? (
+                    <div className="loading-plans">Loading plans...</div>
+                  ) : dataPlans.length > 0 ? (
+                    <div className="data-plans-grid">
+                      {dataPlans.map(plan => (
+                        <div 
+                          key={plan.id}
+                          className={`data-plan ${selectedPlan === plan.id ? 'selected' : ''}`}
+                          onClick={() => setSelectedPlan(plan.id)}
+                        >
+                          <div className="plan-name">{plan.name}</div>
+                          <div className="plan-price">₦{plan.price}</div>
+                          <div className="plan-validity">{plan.validity}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="no-plans">No data plans available for this network</div>
+                  )}
+                </div>
+
+                {selectedPlan && (
+                  <button
+                    className="purchase-btn"
+                    onClick={() => {
+                      const plan = dataPlans.find(p => p.id === selectedPlan);
+                      if (plan) {
+                        handlePurchase('data', plan.price, plan.name);
+                      }
+                    }}
+                    disabled={actionLoading || !phoneNumber}
+                  >
+                    {actionLoading ? 'Processing...' : `Buy Data - ₦${dataPlans.find(p => p.id === selectedPlan)?.price}`}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Airtime Purchase View */}
+          {currentView === 'airtime' && (
+            <div className="airtime-view">
+              <h2>Buy Airtime</h2>
+              <div className="purchase-form">
+                <div className="form-group">
+                  <label>Select Network</label>
+                  <select 
+                    value={selectedAirtimeNetwork} 
+                    onChange={(e) => setSelectedAirtimeNetwork(e.target.value)}
+                    disabled={actionLoading}
+                  >
+                    {airtimeNetworks.map(network => (
+                      <option key={network.code} value={network.code}>
+                        {network.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input
+                    type="tel"
+                    placeholder="Enter phone number"
+                    value={airtimePhoneNumber}
+                    onChange={(e) => setAirtimePhoneNumber(e.target.value)}
+                    disabled={actionLoading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Amount (₦)</label>
+                  <input
+                    type="number"
+                    placeholder="Enter amount"
+                    value={airtimeAmount}
+                    onChange={(e) => setAirtimeAmount(e.target.value)}
+                    disabled={actionLoading}
+                    min="50"
+                  />
+                </div>
+
+                <button
+                  className="purchase-btn"
+                  onClick={() => handlePurchase('airtime', parseInt(airtimeAmount))}
+                  disabled={actionLoading || !airtimePhoneNumber || !airtimeAmount || airtimeAmount < 50}
+                >
+                  {actionLoading ? 'Processing...' : `Buy Airtime - ₦${airtimeAmount}`}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Transactions View */}
+          {currentView === 'transactions' && (
+            <div className="transactions-view">
+              <h2>Transaction History</h2>
+              <div className="transactions-list">
+                {transactions.length > 0 ? (
+                  transactions.map(transaction => (
+                    <div key={transaction.id} className="transaction-item detailed">
+                      <div className="transaction-main">
+                        <div className="transaction-info">
+                          <span className="description">{transaction.description}</span>
+                          <span className="reference">Ref: {transaction.reference}</span>
+                        </div>
+                        <div className={`amount ${transaction.type}`}>
+                          {transaction.type === 'debit' ? '-' : '+'}₦{transaction.amount}
+                        </div>
+                      </div>
+                      <div className="transaction-meta">
+                        <span className="date">{transaction.date}</span>
+                        <span className={`status ${transaction.status}`}>
+                          {transaction.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="no-transactions">
+                    <p>No transactions found</p>
+                    <button 
+                      className="refresh-btn"
+                      onClick={fetchTransactions}
+                    >
+                      Refresh
+                    </button>
                   </div>
                 )}
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {currentView === 'airtime' && (
-          <div className="service-page">
-            <h2>Buy Airtime</h2>
-            
-            <div className="service-form">
-              <div className="form-group">
-                <label>Select Network Provider</label>
-                <select 
-                  value={selectedAirtimeNetwork} 
-                  onChange={(e) => setSelectedAirtimeNetwork(e.target.value)}
-                  disabled={actionLoading}
-                  className="network-select"
-                >
-                  {airtimeNetworks.map(network => (
-                    <option key={network.code} value={network.code}>
-                      {network.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Phone Number</label>
-                <input
-                  type="tel"
-                  value={airtimePhoneNumber}
-                  onChange={(e) => setAirtimePhoneNumber(e.target.value)}
-                  placeholder="08012345678"
-                  disabled={actionLoading}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Amount (₦)</label>
-                <input
-                  type="number"
-                  value={airtimeAmount}
-                  onChange={(e) => setAirtimeAmount(e.target.value)}
-                  placeholder="Enter amount"
-                  min="50"
-                  disabled={actionLoading}
-                />
-              </div>
-
-              <div className="quick-amounts-grid">
-                {[100, 200, 500, 1000, 2000].map(amount => (
-                  <button
-                    key={amount}
-                    className="amount-btn"
-                    onClick={() => setAirtimeAmount(amount.toString())}
-                    disabled={actionLoading}
-                  >
-                    ₦{amount}
-                  </button>
-                ))}
-              </div>
-
-              <button 
-                className="buy-now-btn large"
-                onClick={() => handlePurchase('airtime', parseFloat(airtimeAmount))}
-                disabled={!airtimePhoneNumber || !airtimeAmount || parseFloat(airtimeAmount) < 50 || actionLoading}
-              >
-                {actionLoading ? 'Processing...' : `Buy ₦${airtimeAmount} Airtime`}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {currentView === 'wallet' && (
-          <div className="wallet-page">
-            <h2>Wallet</h2>
-            
-            <div className="wallet-overview">
-              <div className="balance-card large">
-                <div className="balance-info">
-                  <h3>Current Balance</h3>
-                  <h1>₦{walletBalance.toLocaleString()}</h1>
-                </div>
-                <button 
-                  onClick={() => setShowFundModal(true)}
-                  className="fund-btn large"
-                >
-                  Fund Wallet
-                </button>
-              </div>
-
-              <div className="quick-fund-section">
-                <h3>Quick Fund Amounts</h3>
-                <div className="quick-amounts-grid">
-                  {[500, 1000, 2000, 5000, 10000, 20000].map(amount => (
-                    <button
-                      key={amount}
-                      className="amount-card"
-                      onClick={() => {
-                        setFundAmount(amount.toString());
-                        setShowFundModal(true);
-                      }}
-                    >
-                      <span>₦{amount.toLocaleString()}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="transactions-section">
-              <div className="section-header">
-                <h3>Transaction History</h3>
-              </div>
-              {transactions.length === 0 ? (
-                <div className="empty-state">
-                  <p>No transactions yet</p>
-                  <small>Your transactions will appear here</small>
-                </div>
-              ) : (
-                <div className="transactions-list">
-                  {transactions.map(transaction => (
-                    <div key={transaction.id} className="transaction-item detailed">
-                      <div className="transaction-icon">
-                        {transaction.type === 'credit' ? '📥' : '📤'}
-                      </div>
-                      <div className="transaction-info">
-                        <p className="transaction-desc">{transaction.description}</p>
-                        <p className="transaction-date">{transaction.date}</p>
-                        <p className="transaction-reference">Ref: {transaction.reference}</p>
-                      </div>
-                      <p className={`transaction-amount ${transaction.type}`}>
-                        {transaction.type === 'debit' ? '-' : '+'}₦{transaction.amount}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {currentView === 'profile' && (
-          <div className="profile-page">
-            <h2>Profile</h2>
-            
-            <div className="profile-section">
-              <div className="profile-header">
+          {/* Profile View */}
+          {currentView === 'profile' && (
+            <div className="profile-view">
+              <h2>Profile Settings</h2>
+              
+              <div className="profile-section">
                 <div className="profile-image-section">
-                  <div className="profile-image-container">
+                  <div className="profile-image">
                     {profileImageUrl ? (
-                      <img src={profileImageUrl} alt="Profile" className="profile-image" />
+                      <img src={profileImageUrl} alt="Profile" />
                     ) : (
-                      <div className="profile-image-placeholder">
-                        {user?.name?.charAt(0).toUpperCase()}
+                      <div className="profile-initial">
+                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
                     )}
-                    <label htmlFor="profile-upload" className="upload-overlay">
-                      Change Photo
-                    </label>
+                  </div>
+                  <div className="image-actions">
                     <input
-                      id="profile-upload"
                       type="file"
+                      id="profileImage"
                       accept="image/*"
                       onChange={handleProfileImageUpload}
                       style={{ display: 'none' }}
                     />
-                  </div>
-                  <h3>{user?.name}</h3>
-                  <p>{user?.email}</p>
-                </div>
-              </div>
-
-              <div className="profile-content">
-                <div className="profile-card">
-                  <h4>Personal Information</h4>
-                  <form onSubmit={handleProfileUpdate}>
-                    <div className="form-group">
-                      <label>Full Name</label>
-                      <input
-                        type="text"
-                        value={profileData.name}
-                        onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                        disabled={actionLoading}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Email Address</label>
-                      <input
-                        type="email"
-                        value={profileData.email}
-                        disabled
-                        className="disabled"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Phone Number</label>
-                      <input
-                        type="tel"
-                        value={profileData.phone}
-                        onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
-                        disabled={actionLoading}
-                      />
-                    </div>
-                    <button type="submit" className="save-btn" disabled={actionLoading}>
-                      {actionLoading ? 'Saving...' : 'Save Changes'}
-                    </button>
-                  </form>
-                </div>
-
-                <div className="profile-card">
-                  <h4>Change Password</h4>
-                  <form onSubmit={handlePasswordChange}>
-                    <div className="form-group">
-                      <label>Current Password</label>
-                      <input
-                        type="password"
-                        value={profileData.currentPassword}
-                        onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})}
-                        disabled={actionLoading}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>New Password</label>
-                      <input
-                        type="password"
-                        value={profileData.newPassword}
-                        onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})}
-                        disabled={actionLoading}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Confirm New Password</label>
-                      <input
-                        type="password"
-                        value={profileData.confirmPassword}
-                        onChange={(e) => setProfileData({...profileData, confirmPassword: e.target.value})}
-                        disabled={actionLoading}
-                      />
-                    </div>
-                    <button type="submit" className="save-btn" disabled={actionLoading}>
-                      {actionLoading ? 'Changing...' : 'Change Password'}
-                    </button>
-                  </form>
-                </div>
-
-                <div className="profile-card">
-                  <h4>Refer & Earn</h4>
-                  <div className="referral-section">
-                    <p>Invite friends and earn ₦200 when they sign up and fund their wallet!</p>
-                    <div className="referral-code">
-                      <label>Your Referral Code:</label>
-                      <div className="code-display">
-                        <span>{referralCode}</span>
-                        <button 
-                          onClick={() => {
-                            navigator.clipboard.writeText(referralCode);
-                            showNotification('Referral code copied!', 'success');
-                          }}
-                          className="copy-btn"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                    </div>
-                    <div className="referral-stats">
-                      <div className="stat-item">
-                        <span className="stat-number">{referrals.length}</span>
-                        <span className="stat-label">Referred Users</span>
-                      </div>
-                      <div className="stat-item">
-                        <span className="stat-number">₦{referrals.length * 200}</span>
-                        <span className="stat-label">Total Earnings</span>
-                      </div>
-                    </div>
+                    <label htmlFor="profileImage" className="upload-btn">
+                      Change Photo
+                    </label>
                   </div>
                 </div>
 
-                <div className="profile-card">
-                  <h4>Preferences</h4>
-                  <div className="preferences">
-                    <div className="preference-item">
-                      <span>Dark Mode</span>
-                      <div className="toggle-container">
-                        <span className="toggle-label">{darkMode ? 'ON' : 'OFF'}</span>
-                        <div className={`toggle-switch ${darkMode ? 'active' : ''}`} onClick={toggleDarkMode}>
-                          <div className="toggle-slider"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="preference-item">
-                      <span>Notifications</span>
-                      <div className="toggle-container">
-                        <span className="toggle-label">{notificationsEnabled ? 'ON' : 'OFF'}</span>
-                        <div className={`toggle-switch ${notificationsEnabled ? 'active' : ''}`} onClick={toggleNotifications}>
-                          <div className="toggle-slider"></div>
-                        </div>
-                      </div>
-                    </div>
+                <form onSubmit={handleProfileUpdate} className="profile-form">
+                  <h3>Personal Information</h3>
+                  <div className="form-group">
+                    <label>Full Name</label>
+                    <input
+                      type="text"
+                      value={profileData.name}
+                      onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                      disabled={actionLoading}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      value={profileData.email}
+                      disabled
+                      className="disabled"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Phone Number</label>
+                    <input
+                      type="tel"
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                      disabled={actionLoading}
+                    />
+                  </div>
+                  <button type="submit" className="save-btn" disabled={actionLoading}>
+                    {actionLoading ? 'Updating...' : 'Update Profile'}
+                  </button>
+                </form>
+
+                <form onSubmit={handlePasswordChange} className="password-form">
+                  <h3>Change Password</h3>
+                  <div className="form-group">
+                    <label>Current Password</label>
+                    <input
+                      type="password"
+                      value={profileData.currentPassword}
+                      onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})}
+                      disabled={actionLoading}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>New Password</label>
+                    <input
+                      type="password"
+                      value={profileData.newPassword}
+                      onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})}
+                      disabled={actionLoading}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Confirm New Password</label>
+                    <input
+                      type="password"
+                      value={profileData.confirmPassword}
+                      onChange={(e) => setProfileData({...profileData, confirmPassword: e.target.value})}
+                      disabled={actionLoading}
+                    />
+                  </div>
+                  <button type="submit" className="save-btn" disabled={actionLoading}>
+                    {actionLoading ? 'Changing...' : 'Change Password'}
+                  </button>
+                </form>
+
+                <div className="preferences-section">
+                  <h3>Preferences</h3>
+                  <div className="preference-item">
+                    <span>Dark Mode</span>
+                    <button 
+                      className={`toggle-btn ${darkMode ? 'active' : ''}`}
+                      onClick={toggleDarkMode}
+                    >
+                      {darkMode ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                  <div className="preference-item">
+                    <span>Notifications</span>
+                    <button 
+                      className={`toggle-btn ${notificationsEnabled ? 'active' : ''}`}
+                      onClick={toggleNotifications}
+                    >
+                      {notificationsEnabled ? 'ON' : 'OFF'}
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </main>
+          )}
+
+          {/* Referrals View */}
+          {currentView === 'referrals' && (
+            <div className="referrals-view">
+              <h2>Referral Program</h2>
+              
+              <div className="referral-stats">
+                <div className="stat-card">
+                  <h3>Your Referral Code</h3>
+                  <div className="referral-code">
+                    {referralCode || 'Loading...'}
+                  </div>
+                  <button 
+                    className="copy-btn"
+                    onClick={() => {
+                      if (referralCode) {
+                        navigator.clipboard.writeText(referralCode);
+                        showNotification('Referral code copied!', 'success');
+                      }
+                    }}
+                  >
+                    Copy Code
+                  </button>
+                </div>
+
+                <div className="stat-card">
+                  <h3>Total Referrals</h3>
+                  <div className="stat-number">{referrals.length}</div>
+                  <p>People you've referred</p>
+                </div>
+              </div>
+
+              <div className="referral-list">
+                <h3>Your Referrals</h3>
+                {referrals.length > 0 ? (
+                  <div className="referrals-grid">
+                    {referrals.map((referral, index) => (
+                      <div key={index} className="referral-item">
+                        <div className="referral-name">{referral.name}</div>
+                        <div className="referral-email">{referral.email}</div>
+                        <div className="referral-date">
+                          Joined: {new Date(referral.joinDate).toLocaleDateString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="no-referrals">
+                    <p>No referrals yet</p>
+                    <p>Share your referral code with friends to earn rewards!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Fund Wallet Modal */}
       {showFundModal && (
         <div className="modal-overlay">
           <div className="modal">
-            <h3>Fund Wallet</h3>
-            <div className="form-group">
-              <label>Amount (₦)</label>
-              <input
-                type="number"
-                value={fundAmount}
-                onChange={(e) => setFundAmount(e.target.value)}
-                placeholder="Enter amount"
-                min="100"
-                disabled={actionLoading}
-              />
+            <div className="modal-header">
+              <h3>Fund Wallet</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowFundModal(false)}
+              >
+                ×
+              </button>
             </div>
-            <div className="quick-amounts-grid">
-              {[500, 1000, 2000, 5000, 10000].map(amount => (
-                <button
-                  key={amount}
-                  className="amount-btn"
-                  onClick={() => setFundAmount(amount.toString())}
-                >
-                  ₦{amount}
-                </button>
-              ))}
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Amount (₦)</label>
+                <input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={fundAmount}
+                  onChange={(e) => setFundAmount(e.target.value)}
+                  min="100"
+                />
+              </div>
             </div>
             <div className="modal-actions">
               <button 
-                onClick={() => setShowFundModal(false)}
                 className="cancel-btn"
-                disabled={actionLoading}
+                onClick={() => setShowFundModal(false)}
               >
                 Cancel
               </button>
               <button 
-                onClick={() => handleFundWallet(parseFloat(fundAmount))}
                 className="confirm-btn"
-                disabled={!fundAmount || parseFloat(fundAmount) < 100 || actionLoading}
+                onClick={() => {
+                  if (fundAmount && fundAmount >= 100) {
+                    handleFundWallet(parseInt(fundAmount));
+                    setShowFundModal(false);
+                  } else {
+                    showNotification('Please enter a valid amount (minimum ₦100)', 'error');
+                  }
+                }}
+                disabled={actionLoading}
               >
-                {actionLoading ? 'Processing...' : 'Continue to Payment'}
+                {actionLoading ? 'Processing...' : 'Proceed to Payment'}
               </button>
             </div>
           </div>
