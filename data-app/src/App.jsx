@@ -1,5 +1,73 @@
 import React, { useState, useEffect } from 'react';
 
+// InstallBanner Component
+const InstallBanner = () => {
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsVisible(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    window.addEventListener('appinstalled', () => {
+      console.log('App was installed');
+      setIsVisible(false);
+      setDeferredPrompt(null);
+    });
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+
+    if (outcome === 'accepted') {
+      console.log('User accepted the install prompt');
+      setIsVisible(false);
+    }
+    setDeferredPrompt(null);
+  };
+
+  const handleDismiss = () => {
+    setIsVisible(false);
+    localStorage.setItem('installBannerDismissed', Date.now().toString());
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <div className="install-banner">
+      <div className="install-banner-content">
+        <div className="app-info">
+          <div className="app-icon">📱</div>
+          <div className="app-details">
+            <div className="app-name">DataStore</div>
+            <div className="app-website">data-iota-lovat.vercel.app</div>
+          </div>
+        </div>
+        <div className="install-actions">
+          <button className="dismiss-btn" onClick={handleDismiss}>
+            ×
+          </button>
+          <button className="install-btn" onClick={handleInstall}>
+            Install
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -102,9 +170,7 @@ function App() {
   }, [isLoggedIn]);
 
   const initializeGoogleSignIn = () => {
-    // Check if Google script is already loaded
     if (!window.google) {
-      // Load Google Sign-In script
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
@@ -118,7 +184,6 @@ function App() {
       };
       document.head.appendChild(script);
     } else {
-      // Script already loaded, render button directly
       renderGoogleButton();
     }
   };
@@ -137,7 +202,6 @@ function App() {
         cancel_on_tap_outside: true,
       });
       
-      // Render Google Sign-In button with error handling
       const buttonContainer = document.getElementById('googleSignInButton');
       if (buttonContainer && buttonContainer.children.length === 0) {
         window.google.accounts.id.renderButton(
@@ -177,10 +241,8 @@ function App() {
       console.log('Backend response:', data);
       
       if (response.ok && data.success) {
-        // Store token and user data
         localStorage.setItem('jaysub_token', data.data.token);
         
-        // Set user data
         const userData = data.data.user;
         setUser(userData);
         setIsLoggedIn(true);
@@ -195,7 +257,6 @@ function App() {
         
         showNotification('Google sign-in successful!', 'success');
         
-        // Fetch initial data
         await fetchNetworks();
         await fetchAirtimeNetworks();
         await fetchReferrals();
@@ -264,7 +325,7 @@ function App() {
     }
   };
 
-  // Enhanced PWA Implementation
+  // Simplified PWA Implementation
   const initializePWA = async () => {
     if (window.matchMedia('(display-mode: standalone)').matches) {
       console.log('PWA: Running in standalone mode');
@@ -279,50 +340,7 @@ function App() {
       }
     }
 
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      console.log('PWA: Before install prompt event fired');
-      
-      setTimeout(() => {
-        showPWAInstallPrompt(deferredPrompt);
-      }, 5000);
-    });
-
-    window.addEventListener('appinstalled', () => {
-      console.log('PWA: App was installed');
-      deferredPrompt = null;
-      showNotification('JAYSUB installed successfully!', 'success');
-    });
-  };
-
-  const showPWAInstallPrompt = (deferredPrompt) => {
-    if (deferredPrompt && !localStorage.getItem('pwaPromptDismissed')) {
-      const shouldShowPrompt = confirm('Install JAYSUB for better experience! Would you like to install it?');
-      
-      if (shouldShowPrompt) {
-        handlePwaInstall(deferredPrompt);
-      } else {
-        localStorage.setItem('pwaPromptDismissed', 'true');
-      }
-    }
-  };
-
-  const handlePwaInstall = async (deferredPrompt) => {
-    if (deferredPrompt) {
-      try {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        
-        if (outcome === 'accepted') {
-          console.log('PWA: User accepted the install prompt');
-          localStorage.setItem('pwaPromptDismissed', 'true');
-        }
-      } catch (error) {
-        console.error('PWA: Install prompt failed:', error);
-      }
-    }
+    // Removed the manual prompt since we're using InstallBanner component
   };
 
   const checkDarkMode = () => {
@@ -1151,7 +1169,7 @@ function App() {
             </button>
           </div>
 
-          {/* Google Sign-in Button - FIXED with proper rendering */}
+          {/* Google Sign-in Button */}
           <div className="social-auth">
             <div id="googleSignInButton"></div>
           </div>
@@ -1392,7 +1410,7 @@ function App() {
             {actionLoading && <div className="loading-text">Loading data plans...</div>}
             
             <div className="service-form">
-              {/* Network Selection - FIXED with immediate fallback */}
+              {/* Network Selection */}
               <div className="form-group">
                 <label>Select Network Provider</label>
                 <select 
@@ -1400,7 +1418,7 @@ function App() {
                   onChange={(e) => {
                     console.log('Network changed to:', e.target.value);
                     setSelectedNetwork(e.target.value);
-                    setSelectedPlan(''); // Reset selected plan when network changes
+                    setSelectedPlan('');
                   }}
                   disabled={actionLoading}
                   className="network-select"
@@ -1813,7 +1831,9 @@ function App() {
           </div>
         </div>
       )}
-       <InstallBanner />
+
+      {/* Install Banner - ADDED HERE */}
+      <InstallBanner />
     </div>
   );
 }
