@@ -1813,6 +1813,7 @@ function App() {
           </div>
         </div>
       )}
+       <InstallBanner />
     </div>
   );
 }
