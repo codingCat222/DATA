@@ -1958,3 +1958,109 @@ select:focus {
     padding: 20px;
   }
 }
+/* Install Banner Styles */
+.install-banner {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 400px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 999;
+  border: 1px solid #e0e0e0;
+  animation: slideUpBanner 0.3s ease-out;
+}
+
+.install-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+
+.app-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.app-icon {
+  font-size: 24px;
+  margin-right: 12px;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.app-details {
+  flex: 1;
+}
+
+.app-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.app-website {
+  font-size: 12px;
+  color: #666;
+}
+
+.install-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dismiss-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.dismiss-btn:hover {
+  background: #f5f5f5;
+}
+
+.install-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.install-btn:hover {
+  background: #5a6fd8;
+  transform: translateY(-1px);
+}
+
+@keyframes slideUpBanner {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
