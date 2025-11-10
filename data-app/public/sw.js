@@ -8,7 +8,7 @@ const urlsToCache = [
     '/icon-512x512.png'
 ];
 
-// Install event
+// Install Prompt notification event
 self.addEventListener('install', function(event) {
     console.log('Service Worker: Installing...');
     
@@ -22,7 +22,7 @@ self.addEventListener('install', function(event) {
                 })
                 .catch(error => {
                     console.log('Cache addAll failed:', error);
-                    // Even if caching fails, we still want to install
+                
                 });
         })
         .then(() => {
@@ -32,7 +32,7 @@ self.addEventListener('install', function(event) {
     );
 });
 
-// Activate event
+
 self.addEventListener('activate', function(event) {
     console.log('Service Worker: Activating...');
     
@@ -54,18 +54,17 @@ self.addEventListener('activate', function(event) {
     );
 });
 
-// Fetch event
 self.addEventListener('fetch', function(event) {
-    // Skip non-GET requests
+    
     if (event.request.method !== 'GET') return;
     
-    // Skip Chrome extensions
+    
     if (event.request.url.indexOf('chrome-extension') !== -1) return;
     
     event.respondWith(
         caches.match(event.request)
         .then(function(response) {
-            // Return cached version or fetch from network
+        
             if (response) {
                 console.log('Service Worker: Serving from cache', event.request.url);
                 return response;
@@ -74,15 +73,15 @@ self.addEventListener('fetch', function(event) {
             console.log('Service Worker: Fetching from network', event.request.url);
             return fetch(event.request)
                 .then(function(fetchResponse) {
-                    // Check if we received a valid response
+                
                     if (!fetchResponse || fetchResponse.status !== 200 || fetchResponse.type !== 'basic') {
                         return fetchResponse;
                     }
                     
-                    // Clone the response
+                    
                     var responseToCache = fetchResponse.clone();
                     
-                    // Add to cache for future visits
+            
                     caches.open(CACHE_NAME)
                         .then(function(cache) {
                             cache.put(event.request, responseToCache);
@@ -92,7 +91,7 @@ self.addEventListener('fetch', function(event) {
                 })
                 .catch(function(error) {
                     console.log('Service Worker: Fetch failed, returning offline page', error);
-                    // You can return a custom offline page here
+                    
                     return new Response('Offline', {
                         status: 503,
                         statusText: 'Service Unavailable',
@@ -105,7 +104,7 @@ self.addEventListener('fetch', function(event) {
     );
 });
 
-// Message event (optional - for communication with main thread)
+
 self.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
